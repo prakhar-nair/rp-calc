@@ -20,6 +20,7 @@
   <div class="header-spacer"></div>
   <span class="header-tip">Select a trainer → navigate with Next/Prev</span>
   <button class="btn btn-primary" id="btn-import" style="margin-left:8px">⬆ Import Box</button>
+  <button class="btn btn-sm" id="btn-export" style="margin-left:4px">⬇ Export</button>
 </header>
 
 <!-- Import Modal -->
@@ -132,7 +133,6 @@ Jolly Nature
             <span></span><span style="text-align:right;padding-right:2px">EV</span><span>IV</span>
           </div>
           <div class="stats-grid">
-            <!-- HP -->
             <div class="stat-cell">
               <span class="stat-name">HP</span>
               <span class="stat-value" id="atk-stat-hp">—</span>
@@ -141,7 +141,6 @@ Jolly Nature
                 <input id="atk-iv-hp" type="number" min="0" max="31" placeholder="31" title="HP IVs" />
               </div>
             </div>
-            <!-- Atk -->
             <div class="stat-cell">
               <span class="stat-name">Atk</span>
               <span class="stat-value" id="atk-stat-atk">—</span>
@@ -150,7 +149,6 @@ Jolly Nature
                 <input id="atk-iv-atk" type="number" min="0" max="31" placeholder="31" title="Atk IVs" />
               </div>
             </div>
-            <!-- Def -->
             <div class="stat-cell">
               <span class="stat-name">Def</span>
               <span class="stat-value" id="atk-stat-def">—</span>
@@ -159,7 +157,6 @@ Jolly Nature
                 <input id="atk-iv-def" type="number" min="0" max="31" placeholder="31" title="Def IVs" />
               </div>
             </div>
-            <!-- SpA -->
             <div class="stat-cell">
               <span class="stat-name">SpA</span>
               <span class="stat-value" id="atk-stat-spa">—</span>
@@ -168,7 +165,6 @@ Jolly Nature
                 <input id="atk-iv-spa" type="number" min="0" max="31" placeholder="31" title="SpA IVs" />
               </div>
             </div>
-            <!-- SpD -->
             <div class="stat-cell">
               <span class="stat-name">SpD</span>
               <span class="stat-value" id="atk-stat-spd">—</span>
@@ -177,7 +173,6 @@ Jolly Nature
                 <input id="atk-iv-spd" type="number" min="0" max="31" placeholder="31" title="SpD IVs" />
               </div>
             </div>
-            <!-- Spe -->
             <div class="stat-cell">
               <span class="stat-name">Spe</span>
               <span class="stat-value" id="atk-stat-spe">—</span>
@@ -192,32 +187,74 @@ Jolly Nature
         <!-- Moves -->
         <div class="panel-section">
           <div class="panel-section-title">Moves</div>
-          <div class="moves-grid">
-            <div class="field-group">
-              <label>Move 1</label>
-              <input id="atk-move-0" type="text" placeholder="Earthquake" autocomplete="off" />
+          <div class="moves-list">
+            <div class="move-row">
+              <div class="field-group move-field">
+                <label>Move 1</label>
+                <input id="atk-move-0" type="text" placeholder="Earthquake" autocomplete="off" />
+              </div>
+              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-0" /> Crit</label>
+              <select id="move-hits-0" class="hits-select" title="Hit count">
+                <option value="1">×1</option><option value="2">×2</option>
+                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
+              </select>
             </div>
-            <div class="field-group">
-              <label>Move 2</label>
-              <input id="atk-move-1" type="text" placeholder="Dragon Claw" autocomplete="off" />
+            <div class="move-row">
+              <div class="field-group move-field">
+                <label>Move 2</label>
+                <input id="atk-move-1" type="text" placeholder="Dragon Claw" autocomplete="off" />
+              </div>
+              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-1" /> Crit</label>
+              <select id="move-hits-1" class="hits-select" title="Hit count">
+                <option value="1">×1</option><option value="2">×2</option>
+                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
+              </select>
             </div>
-            <div class="field-group">
-              <label>Move 3</label>
-              <input id="atk-move-2" type="text" placeholder="Stone Edge" autocomplete="off" />
+            <div class="move-row">
+              <div class="field-group move-field">
+                <label>Move 3</label>
+                <input id="atk-move-2" type="text" placeholder="Stone Edge" autocomplete="off" />
+              </div>
+              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-2" /> Crit</label>
+              <select id="move-hits-2" class="hits-select" title="Hit count">
+                <option value="1">×1</option><option value="2">×2</option>
+                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
+              </select>
             </div>
-            <div class="field-group">
-              <label>Move 4</label>
-              <input id="atk-move-3" type="text" placeholder="Swords Dance" autocomplete="off" />
+            <div class="move-row">
+              <div class="field-group move-field">
+                <label>Move 4</label>
+                <input id="atk-move-3" type="text" placeholder="Swords Dance" autocomplete="off" />
+              </div>
+              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-3" /> Crit</label>
+              <select id="move-hits-3" class="hits-select" title="Hit count">
+                <option value="1">×1</option><option value="2">×2</option>
+                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
+              </select>
             </div>
           </div>
         </div>
 
-        <!-- Item & Modifiers -->
+        <!-- Attacker Item & Combat Modifiers -->
         <div class="panel-section">
           <div class="panel-section-title">Item &amp; Modifiers</div>
-          <div class="field-group" style="margin-bottom:10px">
-            <label>Held Item</label>
-            <input id="atk-item" type="text" placeholder="None" autocomplete="off" value="None" />
+          <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="field-group" style="flex:2">
+              <label>Held Item</label>
+              <input id="atk-item" type="text" placeholder="None" autocomplete="off" value="None" />
+            </div>
+            <div class="field-group" style="flex:1;min-width:100px">
+              <label>Status</label>
+              <select id="atk-status">
+                <option value="Healthy">Healthy</option>
+                <option value="Burned">Burned</option>
+                <option value="Poisoned">Poisoned</option>
+                <option value="Badly Poisoned">Badly Poisoned</option>
+                <option value="Paralyzed">Paralyzed</option>
+                <option value="Asleep">Asleep</option>
+                <option value="Frozen">Frozen</option>
+              </select>
+            </div>
           </div>
           <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:12px">
             <div class="field-group" style="flex:1">
@@ -246,10 +283,80 @@ Jolly Nature
             </div>
           </div>
           <div class="options-row">
-            <label class="opt-check"><input type="checkbox" id="opt-crit" /> Crit</label>
-            <label class="opt-check"><input type="checkbox" id="opt-burned" /> Burned</label>
             <label class="opt-check"><input type="checkbox" id="opt-reflect" /> Reflect</label>
             <label class="opt-check"><input type="checkbox" id="opt-lightscreen" /> Light Screen</label>
+            <label class="opt-check"><input type="checkbox" id="opt-aurora-veil" /> Aurora Veil</label>
+            <label class="opt-check"><input type="checkbox" id="opt-helping-hand" /> Helping Hand</label>
+          </div>
+        </div>
+
+        <!-- Field, Weather & Hazards -->
+        <div class="panel-section">
+          <div class="panel-section-title">Field &amp; Hazards</div>
+          <div class="flex-row" style="margin-bottom:10px;gap:8px">
+            <div class="field-group" style="flex:1">
+              <label>Weather</label>
+              <select id="field-weather">
+                <option value="None">None</option>
+                <option value="Sun">Sun</option>
+                <option value="Rain">Rain</option>
+                <option value="Sand">Sand</option>
+                <option value="Hail">Hail</option>
+                <option value="Snow">Snow</option>
+                <option value="Fog">Fog</option>
+                <option value="Harsh Sunshine">Harsh Sunshine</option>
+                <option value="Heavy Rain">Heavy Rain</option>
+                <option value="Strong Winds">Strong Winds</option>
+              </select>
+            </div>
+            <div class="field-group" style="flex:1">
+              <label>Terrain</label>
+              <select id="field-terrain">
+                <option value="None">None</option>
+                <option value="Electric">Electric</option>
+                <option value="Grassy">Grassy</option>
+                <option value="Misty">Misty</option>
+                <option value="Psychic">Psychic</option>
+              </select>
+            </div>
+          </div>
+          <div class="options-row" style="margin-bottom:8px">
+            <label class="opt-check"><input type="checkbox" id="opt-tailwind-atk" /> Tailwind (You)</label>
+            <label class="opt-check"><input type="checkbox" id="opt-tailwind-def" /> Tailwind (Foe)</label>
+          </div>
+          <div class="flex-row" style="gap:8px;align-items:center;flex-wrap:wrap">
+            <label class="opt-check"><input type="checkbox" id="opt-stealth-rock" /> Stealth Rock</label>
+            <div class="field-group" style="flex:1;min-width:100px">
+              <label>Spikes Layers</label>
+              <select id="opt-spikes" class="stage-select w-full">
+                <option value="0">0 (None)</option>
+                <option value="1">1 Layer</option>
+                <option value="2">2 Layers</option>
+                <option value="3">3 Layers</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badge Boosts -->
+        <div class="panel-section">
+          <div class="panel-section-title">Badge Boosts (RP)</div>
+          <div class="options-row">
+            <label class="opt-check badge-check" title="Coal Badge: +10% Atk">
+              <input type="checkbox" id="badgeAtk" /> Coal (Atk)
+            </label>
+            <label class="opt-check badge-check" title="Forest Badge: +10% Def">
+              <input type="checkbox" id="badgeDef" /> Forest (Def)
+            </label>
+            <label class="opt-check badge-check" title="Cobble Badge: +10% Spe">
+              <input type="checkbox" id="badgeSpe" /> Cobble (Spe)
+            </label>
+            <label class="opt-check badge-check" title="Fen Badge: +10% SpA">
+              <input type="checkbox" id="badgeSpa" /> Fen (SpA)
+            </label>
+            <label class="opt-check badge-check" title="Relic Badge: +10% SpD">
+              <input type="checkbox" id="badgeSpd" /> Relic (SpD)
+            </label>
           </div>
         </div>
 
@@ -318,8 +425,37 @@ Jolly Nature
           </div>
         </div>
 
+        <!-- Defender status + current HP tracking -->
+        <div class="def-options-bar">
+          <div class="field-group" style="flex:1;min-width:120px">
+            <label>Defender Status</label>
+            <select id="def-status">
+              <option value="Healthy">Healthy</option>
+              <option value="Burned">Burned</option>
+              <option value="Poisoned">Poisoned</option>
+              <option value="Badly Poisoned">Badly Poisoned</option>
+              <option value="Paralyzed">Paralyzed</option>
+              <option value="Asleep">Asleep</option>
+              <option value="Frozen">Frozen</option>
+            </select>
+          </div>
+          <div class="field-group" style="flex:0 0 90px">
+            <label>Current HP</label>
+            <input type="number" id="def-current-hp" min="1" placeholder="max" />
+          </div>
+          <div class="def-hp-wrap">
+            <div class="def-hp-bar-bg">
+              <div id="def-hp-bar-fill" class="def-hp-fill hp-green" style="width:100%"></div>
+            </div>
+            <span id="def-hp-label" class="def-hp-label">Full HP</span>
+          </div>
+        </div>
+
         <!-- Results -->
         <div class="results-section">
+          <div id="field-tags" class="field-tags-row"></div>
+          <div id="speed-banner" class="speed-banner" hidden></div>
+          <div id="hazard-banner" class="hazard-banner" hidden></div>
           <div class="results-header">Damage Results</div>
           <div id="results-list"></div>
         </div>

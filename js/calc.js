@@ -18,12 +18,12 @@ function getStats(pokemon) {
   const ev = pokemon.evs;
   const lv = pokemon.level;
   return {
-    hp:  calcStat(bHp,  iv.hp,  ev.hp,  lv, 1,       true),
-    atk: calcStat(bAtk, iv.atk, ev.atk, lv, n.atk,   false),
-    def: calcStat(bDef, iv.def, ev.def, lv, n.def,   false),
-    spa: calcStat(bSpa, iv.spa, ev.spa, lv, n.spa,   false),
-    spd: calcStat(bSpd, iv.spd, ev.spd, lv, n.spd,   false),
-    spe: calcStat(bSpe, iv.spe, ev.spe, lv, n.spe,   false),
+    hp:  calcStat(bHp,  iv.hp,  ev.hp,  lv, 1,     true),
+    atk: calcStat(bAtk, iv.atk, ev.atk, lv, n.atk, false),
+    def: calcStat(bDef, iv.def, ev.def, lv, n.def, false),
+    spa: calcStat(bSpa, iv.spa, ev.spa, lv, n.spa, false),
+    spd: calcStat(bSpd, iv.spd, ev.spd, lv, n.spd, false),
+    spe: calcStat(bSpe, iv.spe, ev.spe, lv, n.spe, false),
   };
 }
 
@@ -41,6 +41,59 @@ function hasSTAB(moveType, attackerTypes) {
   return attackerTypes.includes(moveType);
 }
 
+// ---- Weather modifier ----
+function getWeatherMod(weather, moveType) {
+  if (weather === 'Sun' || weather === 'Harsh Sunshine') {
+    if (moveType === 'Fire') return 1.5;
+    if (moveType === 'Water') return 0.5;
+  }
+  if (weather === 'Rain' || weather === 'Heavy Rain') {
+    if (moveType === 'Water') return 1.5;
+    if (moveType === 'Fire') return 0.5;
+  }
+  return 1.0;
+}
+
+// ---- Terrain modifier (Gen 6+, added for completeness) ----
+function getTerrainMod(terrain, moveType) {
+  if (terrain === 'Electric' && moveType === 'Electric') return 1.3;
+  if (terrain === 'Grassy'   && moveType === 'Grass')    return 1.3;
+  if (terrain === 'Misty'    && moveType === 'Dragon')   return 0.5;
+  if (terrain === 'Psychic'  && moveType === 'Psychic')  return 1.3;
+  return 1.0;
+}
+
+// ---- Sandstorm SpD boost for Rock types ----
+function getSandSpDMod(weather, defenderTypes) {
+  if ((weather === 'Sand') && defenderTypes.includes('Rock')) return 1.5;
+  return 1.0;
+}
+
+// ---- Stealth Rock damage (fraction of max HP) ----
+function calcStealthRockDamage(defenderTypes) {
+  const eff = getTypeEffectiveness('Rock', defenderTypes);
+  // Base is 1/8, scaled by type effectiveness
+  const fractions = { 0.25: 1/32, 0.5: 1/16, 1: 1/8, 2: 1/4, 4: 1/2 };
+  return fractions[eff] || 1/8;
+}
+
+// ---- Spikes damage (fraction of max HP) ----
+function calcSpikesDamage(layers, defenderTypes) {
+  if (!layers || defenderTypes.includes('Flying')) return 0;
+  const fracs = [0, 1/8, 1/6, 1/4];
+  return fracs[Math.min(layers, 3)] || 0;
+}
+
+// ---- Status burn modifier (on physical move from burned attacker) ----
+function getBurnMod(status, category) {
+  return (status === 'Burned' && category === 'P') ? 0.5 : 1.0;
+}
+
+// ---- Paralysis speed penalty ----
+function getParaSpeedMod(status) {
+  return status === 'Paralyzed' ? 0.25 : 1.0;
+}
+
 // Returns { min, max, rolls } where rolls is array of 16 damage values
 function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, options = {}) {
   const moveData = MOVES[moveKey];
@@ -48,117 +101,163 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
 
   let [basePower, moveType, category] = moveData;
 
-  if (category === 'X') return null; // status move
-  if (basePower <= 0) return null;   // variable power — skip for now
+  if (category === 'X') return null;
+  if (basePower <= 0) return null;
 
   const isPhysical = category === 'P';
-  const atkStat = isPhysical ? atkStats.atk : atkStats.spa;
-  const defStat = isPhysical ? defStats.def : defStats.spd;
+  let atkStat = isPhysical ? atkStats.atk : atkStats.spa;
+
+  const defData  = POKEMON_DATA[defenderMon.name];
+  const atkData  = POKEMON_DATA[attacker.name];
+  const defTypes = defData ? [defData[6], defData[7]].filter(Boolean) : [];
+  const atkTypes = atkData ? [atkData[6], atkData[7]].filter(Boolean) : [];
+
+  // Badge boosts on attacker stat
+  if (options.badgeAtk && isPhysical)  atkStat = Math.floor(atkStat * 1.1);
+  if (options.badgeSpa && !isPhysical) atkStat = Math.floor(atkStat * 1.1);
 
   // Item modifiers on attack stat
-  let atkStatMod = atkStat;
-  if (options.attackerItem === 'Choice Band' && isPhysical) atkStatMod = Math.floor(atkStat * 1.5);
-  if (options.attackerItem === 'Choice Specs' && !isPhysical) atkStatMod = Math.floor(atkStat * 1.5);
+  if (options.attackerItem === 'Choice Band' && isPhysical)  atkStat = Math.floor(atkStat * 1.5);
+  if (options.attackerItem === 'Choice Specs' && !isPhysical) atkStat = Math.floor(atkStat * 1.5);
 
   // Burn halves physical attack
-  if (options.burned && isPhysical) atkStatMod = Math.floor(atkStatMod * 0.5);
+  atkStat = Math.floor(atkStat * getBurnMod(options.attackerStatus || 'Healthy', category));
 
-  // Stage modifiers: -6 to +6
+  // Stat stages
   const atkStage = options.atkStage || 0;
   const defStage = options.defStage || 0;
   const atkMult = atkStage >= 0 ? (2 + atkStage) / 2 : 2 / (2 - atkStage);
   const defMult = defStage >= 0 ? (2 + defStage) / 2 : 2 / (2 - defStage);
-  atkStatMod = Math.floor(atkStatMod * atkMult);
-  const defStatFinal = Math.floor(defStat * defMult);
+  const atkStatMod   = Math.floor(atkStat * atkMult);
+
+  // Defender stat — sand boosts Rock SpD
+  let defStatBase = isPhysical ? defStats.def : defStats.spd;
+  if (!isPhysical) defStatBase = Math.floor(defStatBase * getSandSpDMod(options.weather || 'None', defTypes));
+  const defStatFinal = Math.floor(defStatBase * defMult);
 
   const level = attacker.level;
-
-  // Base damage
   const base = Math.floor(Math.floor(Math.floor(2 * level / 5 + 2) * basePower * atkStatMod / defStatFinal) / 50) + 2;
-
-  // Collect modifiers
-  const defData = POKEMON_DATA[defenderMon.name];
-  const atkData = POKEMON_DATA[attacker.name];
-  const defTypes = defData ? [defData[6], defData[7]].filter(Boolean) : [];
-  const atkTypes = atkData ? [atkData[6], atkData[7]].filter(Boolean) : [];
 
   const typeEff = getTypeEffectiveness(moveType, defTypes);
   if (typeEff === 0) return { immune: true, effectiveness: 0 };
 
-  const stab = hasSTAB(moveType, atkTypes) ? 1.5 : 1.0;
+  const stab      = hasSTAB(moveType, atkTypes) ? 1.5 : 1.0;
+  const weatherMod = getWeatherMod(options.weather || 'None', moveType);
+  const terrainMod = getTerrainMod(options.terrain || 'None', moveType);
 
-  // Item modifiers on damage
+  // Item damage modifiers
   let itemMod = 1.0;
-  if (options.attackerItem === 'Life Orb') itemMod = 1.3;
-  if (options.attackerItem === 'Expert Belt' && typeEff > 1) itemMod = 1.2;
-  if (options.attackerItem === 'Muscle Band' && isPhysical) itemMod = 1.1;
-  if (options.attackerItem === 'Wise Glasses' && !isPhysical) itemMod = 1.1;
+  if (options.attackerItem === 'Life Orb')                         itemMod = 1.3;
+  if (options.attackerItem === 'Expert Belt' && typeEff > 1)       itemMod = 1.2;
+  if (options.attackerItem === 'Muscle Band' && isPhysical)        itemMod = 1.1;
+  if (options.attackerItem === 'Wise Glasses' && !isPhysical)      itemMod = 1.1;
 
-  // Screen halves damage
+  // Screens
   let screenMod = 1.0;
-  if (options.reflect && isPhysical) screenMod = 0.5;
-  if (options.lightScreen && !isPhysical) screenMod = 0.5;
+  if (options.reflect && isPhysical)                               screenMod *= 0.5;
+  if (options.lightScreen && !isPhysical)                          screenMod *= 0.5;
+  if (options.auroraVeil)                                          screenMod *= 0.5;
 
-  // Critical hit (2x in Gen 4)
+  // Helping Hand (doubles context)
+  const helpingHandMod = options.helpingHand ? 1.5 : 1.0;
+
+  // Critical hit (2x in Gen 4, ignores screens and negative atk stages)
   const critMod = options.crit ? 2.0 : 1.0;
 
-  // Compute 16 random rolls (85/100 to 100/100)
+  // Multi-hit count
+  const hitCount = Math.max(1, parseInt(options.hitCount) || 1);
+
+  // 16 random rolls (85-100)
   const rolls = [];
   for (let i = 0; i <= 15; i++) {
-    const randNumer = 85 + i;
     let dmg = base;
     dmg = Math.floor(dmg * stab);
-    // Type effectiveness applied via chain multiply
-    if (typeEff === 0.25) { dmg = Math.floor(dmg * 0.25); }
-    else if (typeEff === 0.5) { dmg = Math.floor(dmg * 0.5); }
-    else if (typeEff === 2) { dmg = dmg * 2; }
-    else if (typeEff === 4) { dmg = dmg * 4; }
+    if      (typeEff === 0.25) dmg = Math.floor(dmg * 0.25);
+    else if (typeEff === 0.5)  dmg = Math.floor(dmg * 0.5);
+    else if (typeEff === 2)    dmg = dmg * 2;
+    else if (typeEff === 4)    dmg = dmg * 4;
+    dmg = Math.floor(dmg * weatherMod);
+    dmg = Math.floor(dmg * terrainMod);
     dmg = Math.floor(dmg * itemMod);
     dmg = Math.floor(dmg * screenMod);
+    dmg = Math.floor(dmg * helpingHandMod);
     dmg = Math.floor(dmg * critMod);
-    dmg = Math.floor(dmg * randNumer / 100);
-    rolls.push(Math.max(1, dmg));
+    dmg = Math.floor(dmg * (85 + i) / 100);
+    dmg = Math.max(1, dmg) * hitCount;
+    rolls.push(dmg);
   }
 
-  const min = rolls[0];
-  const max = rolls[15];
-  const defHP = defStats.hp;
+  const min    = rolls[0];
+  const max    = rolls[15];
+  const defHP  = defStats.hp;
+  // Use current HP if provided
+  const currentHP = (options.defCurrentHP != null && options.defCurrentHP > 0)
+    ? options.defCurrentHP
+    : defHP;
 
   return {
     immune: false,
     effectiveness: typeEff,
-    moveType,
-    category,
-    basePower,
+    moveType, category, basePower,
     stab: stab > 1,
-    min,
-    max,
-    defHP,
-    minPct: min / defHP * 100,
-    maxPct: max / defHP * 100,
+    weatherBoosted:  weatherMod > 1,
+    weatherReduced:  weatherMod < 1,
+    terrainBoosted:  terrainMod > 1,
+    terrainReduced:  terrainMod < 1,
+    hitCount,
+    min, max,
+    defHP, currentHP,
+    minPct:  min / defHP * 100,
+    maxPct:  max / defHP * 100,
+    minCurPct: min / currentHP * 100,
+    maxCurPct: max / currentHP * 100,
     rolls,
-    ohko: min >= defHP,
-    twoHko: min * 2 >= defHP,
-    threeHko: min * 3 >= defHP,
+    ohko:    min >= currentHP,
+    twoHko:  min * 2 >= currentHP,
+    threeHko: min * 3 >= currentHP,
+    possibleOhko: max >= currentHP && min < currentHP,
+    possibleTwoHko: max * 2 >= currentHP && min * 2 < currentHP,
   };
 }
 
 function getKoLabel(result) {
   if (!result || result.immune) return '';
   if (result.ohko) return 'OHKO';
+  if (result.possibleOhko) return 'Possible OHKO';
   if (result.twoHko) return '2HKO';
+  if (result.possibleTwoHko) return 'Possible 2HKO';
   if (result.threeHko) return '3HKO';
-  if (result.max >= result.defHP) return 'Possible OHKO';
-  if (result.max * 2 >= result.defHP) return 'Possible 2HKO';
   return '';
 }
 
 function getEffectivenessLabel(eff) {
-  if (eff === 0) return 'Immune';
+  if (eff === 0)    return 'Immune';
   if (eff === 0.25) return '¼×';
-  if (eff === 0.5) return '½×';
-  if (eff === 1) return '1×';
-  if (eff === 2) return '2×';
-  if (eff === 4) return '4×';
+  if (eff === 0.5)  return '½×';
+  if (eff === 1)    return '1×';
+  if (eff === 2)    return '2×';
+  if (eff === 4)    return '4×';
   return `${eff}×`;
+}
+
+// ---- Speed comparison ----
+function compareSpeed(atkStats, defStats, options = {}) {
+  let atkSpe = atkStats.spe;
+  let defSpe = defStats.spe;
+
+  const atkParaMod = options.attackerStatus === 'Paralyzed' ? 0.25 : 1.0;
+  const defParaMod = options.defStatus === 'Paralyzed'      ? 0.25 : 1.0;
+
+  atkSpe = Math.floor(atkSpe * atkParaMod);
+  defSpe = Math.floor(defSpe * defParaMod);
+
+  if (options.tailwindAtk) atkSpe *= 2;
+  if (options.tailwindDef) defSpe *= 2;
+
+  if (options.badgeSpe) atkSpe = Math.floor(atkSpe * 1.1);
+
+  const weather = options.weather || 'None';
+  // Swift Swim / Chlorophyll etc. handled by items — skip for now
+
+  return { atkSpe, defSpe, faster: atkSpe > defSpe ? 'atk' : atkSpe < defSpe ? 'def' : 'tie' };
 }

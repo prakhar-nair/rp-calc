@@ -941,3 +941,184 @@ body {
 .muted { color: var(--muted); }
 .flex-row { display: flex; gap: 8px; align-items: center; }
 .w-full { width: 100%; }
+
+/* ---- Moves list with per-move controls ---- */
+.moves-list { display: flex; flex-direction: column; gap: 6px; }
+.move-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.move-field { flex: 1; }
+.move-crit-check {
+  flex-shrink: 0;
+  padding-bottom: 6px;
+  font-size: 0.73rem;
+  white-space: nowrap;
+}
+.hits-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 5px 4px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  flex-shrink: 0;
+  width: 44px;
+  cursor: pointer;
+}
+.hits-select:focus { outline: none; border-color: var(--accent); }
+
+/* ---- Badge boost section ---- */
+.badge-check { font-size: 0.74rem; }
+
+/* ---- Defender options bar ---- */
+.def-options-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.def-hp-wrap {
+  flex: 2;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 2px;
+}
+.def-hp-bar-bg {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.def-hp-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+.hp-green  { background: var(--green); }
+.hp-yellow { background: var(--yellow); }
+.hp-red    { background: var(--red); }
+.def-hp-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---- Speed banner ---- */
+.speed-banner {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.speed-banner[hidden] { display: none; }
+.speed-banner-atk {
+  background: rgba(76,175,110,0.12);
+  border-color: rgba(76,175,110,0.35);
+  color: var(--green);
+}
+.speed-banner-def {
+  background: rgba(224,85,85,0.12);
+  border-color: rgba(224,85,85,0.35);
+  color: var(--red);
+}
+.speed-banner-tie {
+  background: rgba(124,110,245,0.1);
+  border-color: rgba(124,110,245,0.3);
+  color: var(--accent2);
+}
+
+/* ---- Hazard banner ---- */
+.hazard-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.hazard-banner[hidden] { display: none; }
+.hazard-item {
+  background: rgba(240,131,77,0.12);
+  border: 1px solid rgba(240,131,77,0.35);
+  color: var(--orange);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ---- Field tags ---- */
+.field-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.field-tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  color: var(--sub);
+}
+.weather-tag {
+  background: rgba(100,160,240,0.12);
+  border-color: rgba(100,160,240,0.35);
+  color: #7ab0f0;
+}
+.terrain-tag {
+  background: rgba(76,175,110,0.12);
+  border-color: rgba(76,175,110,0.35);
+  color: var(--green);
+}
+
+/* ---- Result move tags ---- */
+.weather-boost-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(240,192,64,0.15);
+  border: 1px solid rgba(240,192,64,0.35);
+  color: var(--gold);
+}
+.weather-reduce-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(100,100,180,0.15);
+  border: 1px solid rgba(100,100,180,0.35);
+  color: #7880c0;
+}
+.terrain-boost-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(76,175,110,0.15);
+  border: 1px solid rgba(76,175,110,0.35);
+  color: var(--green);
+}
+.crit-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(240,192,64,0.2);
+  border: 1px solid rgba(240,192,64,0.5);
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
