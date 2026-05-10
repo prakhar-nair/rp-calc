@@ -5,13 +5,6 @@
 const WEATHER_OPTIONS = ['None','Sun','Rain','Sand','Hail','Snow','Fog','Harsh Sunshine','Heavy Rain','Strong Winds'];
 const TERRAIN_OPTIONS = ['None','Electric','Grassy','Misty','Psychic'];
 const STATUS_OPTIONS  = ['Healthy','Burned','Poisoned','Badly Poisoned','Paralyzed','Asleep','Frozen'];
-const BADGES = [
-  { id:'badgeAtk', label:'Coal Badge', stat:'Atk', mod:'atk' },
-  { id:'badgeDef', label:'Forest Badge', stat:'Def', mod:'def' },
-  { id:'badgeSpe', label:'Cobble Badge', stat:'Spe', mod:'spe' },
-  { id:'badgeSpa', label:'Fen Badge', stat:'SpA', mod:'spa' },
-  { id:'badgeSpd', label:'Relic Badge', stat:'SpD', mod:'spd' },
-];
 
 const state = {
   trainerIdx: 0,
@@ -29,33 +22,34 @@ const state = {
     status: 'Healthy',
     moves: ['Earthquake','Dragon Claw','Stone Edge','Swords Dance'],
     moveCrits: [false, false, false, false],
-    moveHits:  [1, 1, 1, 1],
   },
   options: {
-    atkStage: 0,
-    defStage: 0,
+    // Stat stages — your pokemon
+    myAtkStage: 0,
+    myDefStage: 0,
+    // Stat stages — foe's pokemon
+    foeAtkStage: 0,
+    foeDefStage: 0,
     // Field
     weather:     'None',
     terrain:     'None',
     helpingHand: false,
     tailwindAtk: false,
     tailwindDef: false,
-    // Hazards on defender side
+    // Your screens (reduce damage you take from foe)
+    myReflect:     false,
+    myLightScreen: false,
+    myAuroraVeil:  false,
+    // Foe's screens (reduce damage you deal to foe)
+    foeReflect:     false,
+    foeLightScreen: false,
+    foeAuroraVeil:  false,
+    // Hazards on foe's side
     stealthRock: false,
     spikes: 0,
-    // Screens on defender side
-    reflect:     false,
-    lightScreen: false,
-    auroraVeil:  false,
-    // Badge boosts (RP-specific)
-    badgeAtk: false,
-    badgeDef: false,
-    badgeSpe: false,
-    badgeSpa: false,
-    badgeSpd: false,
-    // Defender
+    // Foe's status & current HP
     defStatus:    'Healthy',
-    defCurrentHP: null,    // null = full HP
+    defCurrentHP: null,
   },
 };
 
@@ -111,15 +105,15 @@ function resetAttacker() {
     evs:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0},
     moves:['Earthquake','Dragon Claw','Stone Edge','Swords Dance'],
     moveCrits:[false,false,false,false],
-    moveHits:[1,1,1,1],
   };
   state.options = {
-    atkStage:0, defStage:0,
+    myAtkStage:0, myDefStage:0,
+    foeAtkStage:0, foeDefStage:0,
     weather:'None', terrain:'None',
     helpingHand:false, tailwindAtk:false, tailwindDef:false,
+    myReflect:false, myLightScreen:false, myAuroraVeil:false,
+    foeReflect:false, foeLightScreen:false, foeAuroraVeil:false,
     stealthRock:false, spikes:0,
-    reflect:false, lightScreen:false, auroraVeil:false,
-    badgeAtk:false, badgeDef:false, badgeSpe:false, badgeSpa:false, badgeSpd:false,
     defStatus:'Healthy', defCurrentHP:null,
   };
   syncAttackerInputsToState();
@@ -183,7 +177,6 @@ function bindAttackerInputs() {
     updateAttackerStats(); renderResults();
   });
 
-  // Nature select — populate
   const natSel = document.getElementById('atk-nature');
   Object.keys(NATURES).forEach(n => {
     const opt = document.createElement('option');
@@ -218,59 +211,49 @@ function bindAttackerInputs() {
     document.getElementById(`move-crit-${i}`).addEventListener('change', e => {
       state.attacker.moveCrits[i] = e.target.checked; renderResults();
     });
-    document.getElementById(`move-hits-${i}`).addEventListener('change', e => {
-      state.attacker.moveHits[i] = Math.max(1, parseInt(e.target.value)||1); renderResults();
-    });
   }
 }
 
 // ---- Bind field / options inputs ----
 function bindOptionsInputs() {
-  const bind = (id, key, type='checkbox') => {
+  const bindCheck = (id, key) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (type === 'checkbox') {
-      el.addEventListener('change', e => { state.options[key] = e.target.checked; renderResults(); });
-    } else {
-      el.addEventListener('change', e => {
-        state.options[key] = type === 'int' ? parseInt(e.target.value)||0 : e.target.value;
-        renderResults();
-      });
-    }
+    el.addEventListener('change', e => { state.options[key] = e.target.checked; renderResults(); });
+  };
+  const bindSelect = (id, key, asInt=false) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', e => {
+      state.options[key] = asInt ? (parseInt(e.target.value)||0) : e.target.value;
+      renderResults();
+    });
   };
 
-  bind('field-weather',     'weather', 'select');
-  bind('field-terrain',     'terrain', 'select');
-  bind('opt-helping-hand',  'helpingHand');
-  bind('opt-tailwind-atk',  'tailwindAtk');
-  bind('opt-tailwind-def',  'tailwindDef');
-  bind('opt-stealth-rock',  'stealthRock');
-  bind('opt-aurora-veil',   'auroraVeil');
-  bind('opt-reflect',       'reflect');
-  bind('opt-lightscreen',   'lightScreen');
+  bindSelect('field-weather',    'weather');
+  bindSelect('field-terrain',    'terrain');
+  bindSelect('my-atk-stage',    'myAtkStage',  true);
+  bindSelect('my-def-stage',    'myDefStage',  true);
+  bindSelect('foe-atk-stage',   'foeAtkStage', true);
+  bindSelect('foe-def-stage',   'foeDefStage', true);
+  bindSelect('opt-spikes',      'spikes',      true);
 
-  document.getElementById('opt-spikes').addEventListener('change', e => {
-    state.options.spikes = parseInt(e.target.value)||0; renderResults();
-  });
+  bindCheck('opt-helping-hand',  'helpingHand');
+  bindCheck('opt-tailwind-atk',  'tailwindAtk');
+  bindCheck('opt-tailwind-def',  'tailwindDef');
+  bindCheck('opt-stealth-rock',  'stealthRock');
 
-  document.getElementById('atk-stage').addEventListener('change', e => {
-    state.options.atkStage = parseInt(e.target.value)||0; renderResults();
-  });
-  document.getElementById('def-stage').addEventListener('change', e => {
-    state.options.defStage = parseInt(e.target.value)||0; renderResults();
-  });
+  bindCheck('my-reflect',        'myReflect');
+  bindCheck('my-lightscreen',    'myLightScreen');
+  bindCheck('my-aurora-veil',    'myAuroraVeil');
+  bindCheck('foe-reflect',       'foeReflect');
+  bindCheck('foe-lightscreen',   'foeLightScreen');
+  bindCheck('foe-aurora-veil',   'foeAuroraVeil');
 
   document.getElementById('def-status').addEventListener('change', e => {
     state.options.defStatus = e.target.value; renderResults();
   });
 
-  BADGES.forEach(b => {
-    document.getElementById(b.id).addEventListener('change', e => {
-      state.options[b.id] = e.target.checked; renderResults();
-    });
-  });
-
-  // Defender current HP
   document.getElementById('def-current-hp').addEventListener('input', e => {
     const val = parseInt(e.target.value);
     const defMon  = currentMon();
@@ -321,7 +304,6 @@ function syncAttackerInputsToState() {
     set(`atk-move-${i}`, a.moves[i]||'');
     const crit = document.getElementById(`move-crit-${i}`);
     if (crit) crit.checked = a.moveCrits[i];
-    set(`move-hits-${i}`, a.moveHits[i]);
   }
   ['hp','atk','def','spa','spd','spe'].forEach(s => {
     set(`atk-ev-${s}`, a.evs[s]);
@@ -329,6 +311,7 @@ function syncAttackerInputsToState() {
   });
   updateAttackerStats();
 }
+
 function syncOptionsInputsToState() {
   const o = state.options;
   const set = (id, v, type='val') => {
@@ -336,20 +319,24 @@ function syncOptionsInputsToState() {
     if (!el) return;
     if (type==='check') el.checked = v; else el.value = v;
   };
-  set('field-weather',    o.weather, 'val');
-  set('field-terrain',    o.terrain, 'val');
+  set('field-weather',    o.weather);
+  set('field-terrain',    o.terrain);
+  set('my-atk-stage',    o.myAtkStage);
+  set('my-def-stage',    o.myDefStage);
+  set('foe-atk-stage',   o.foeAtkStage);
+  set('foe-def-stage',   o.foeDefStage);
+  set('opt-spikes',       o.spikes);
   set('opt-helping-hand', o.helpingHand, 'check');
   set('opt-tailwind-atk', o.tailwindAtk, 'check');
   set('opt-tailwind-def', o.tailwindDef, 'check');
   set('opt-stealth-rock', o.stealthRock, 'check');
-  set('opt-spikes',       o.spikes, 'val');
-  set('opt-reflect',      o.reflect, 'check');
-  set('opt-lightscreen',  o.lightScreen, 'check');
-  set('opt-aurora-veil',  o.auroraVeil, 'check');
-  set('atk-stage',        o.atkStage, 'val');
-  set('def-stage',        o.defStage, 'val');
-  set('def-status',       o.defStatus, 'val');
-  BADGES.forEach(b => set(b.id, o[b.id], 'check'));
+  set('my-reflect',       o.myReflect,     'check');
+  set('my-lightscreen',   o.myLightScreen, 'check');
+  set('my-aurora-veil',   o.myAuroraVeil,  'check');
+  set('foe-reflect',      o.foeReflect,     'check');
+  set('foe-lightscreen',  o.foeLightScreen, 'check');
+  set('foe-aurora-veil',  o.foeAuroraVeil,  'check');
+  set('def-status',       o.defStatus);
 }
 
 // ---- Main render ----
@@ -425,7 +412,6 @@ function renderDefender() {
       const el = document.getElementById(`def-stat-${s}`);
       if (el) el.textContent = defStats[s];
     });
-    // Reset current HP input max
     const hpInput = document.getElementById('def-current-hp');
     if (hpInput) {
       hpInput.max = defStats.hp;
@@ -464,15 +450,96 @@ function renderDefender() {
   });
 }
 
+// ---- Build a result card element ----
+function buildResultCard(moveKey, result, moveData, isCrit, isIncoming) {
+  const card = document.createElement('div');
+  card.className = 'result-card' + (isIncoming ? ' incoming-card' : '');
+
+  if (!result || !moveData) {
+    card.innerHTML = `<span class="result-move-name">${moveKey}</span><span class="result-detail muted">—</span>`;
+    return card;
+  }
+
+  const [power, mType, cat] = moveData;
+
+  if (result.immune) {
+    card.classList.add('result-immune');
+    card.innerHTML = `<div class="result-top">
+      <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
+      <span class="result-move-name">${moveKey}</span>
+      <span class="ko-tag" style="background:#444;color:#888">Immune</span>
+    </div>`;
+    return card;
+  }
+
+  if (cat === 'X' || power <= 0) {
+    card.innerHTML = `<div class="result-top">
+      <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
+      <span class="result-move-name">${moveKey}</span>
+      <span class="result-label status-label">Status</span>
+    </div>`;
+    return card;
+  }
+
+  const koLabel  = getKoLabel(result);
+  const effLabel = getEffectivenessLabel(result.effectiveness);
+  const pctMin   = result.minPct.toFixed(1);
+  const pctMax   = result.maxPct.toFixed(1);
+
+  const isPartialHP = !isIncoming && state.options.defCurrentHP != null;
+  const defStats = getStats(currentMon());
+  const defHP = defStats ? defStats.hp : 1;
+  const dmgLine = isPartialHP
+    ? `${result.min}–${result.max} HP &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max HP &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% current HP`
+    : `${result.min}–${result.max} HP &nbsp;·&nbsp; ${pctMin}%–${pctMax}%`;
+
+  let koClass = '';
+  if (koLabel === 'OHKO')               koClass = 'ko-ohko';
+  else if (koLabel === 'Possible OHKO') koClass = 'ko-possible';
+  else if (koLabel === '2HKO')          koClass = 'ko-2hko';
+  else if (koLabel === 'Possible 2HKO') koClass = 'ko-possible';
+  else if (koLabel === '3HKO')          koClass = 'ko-3hko';
+
+  const effClass = result.effectiveness > 1 ? 'eff-super' : result.effectiveness < 1 ? 'eff-not' : '';
+  const wTag = result.weatherBoosted ? '<span class="weather-boost-tag">Weather+</span>'
+             : result.weatherReduced  ? '<span class="weather-reduce-tag">Weather−</span>' : '';
+  const tTag = result.terrainBoosted  ? '<span class="terrain-boost-tag">Terrain+</span>' : '';
+
+  const barPct = Math.min(100, result.maxPct);
+  const barMin = Math.min(100, result.minPct);
+
+  card.innerHTML = `
+    <div class="result-top">
+      <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
+      <span class="result-move-name">${moveKey}</span>
+      <span class="result-power">${power} BP</span>
+      ${result.stab ? '<span class="stab-tag">STAB</span>' : ''}
+      <span class="eff-tag ${effClass}">${effLabel}</span>
+      ${wTag}${tTag}
+      ${isCrit ? '<span class="crit-tag">Crit</span>' : ''}
+      ${koLabel ? `<span class="ko-tag ${koClass}">${koLabel}</span>` : ''}
+    </div>
+    <div class="result-dmg">${dmgLine}</div>
+    <div class="result-bar-wrap">
+      <div class="result-bar">
+        <div class="result-bar-max" style="width:${barPct}%"></div>
+        <div class="result-bar-min" style="width:${barMin}%"></div>
+      </div>
+    </div>`;
+  return card;
+}
+
 // ---- Results ----
 function renderResults() {
-  const resultsEl = document.getElementById('results-list');
-  resultsEl.innerHTML = '';
+  const resultsEl  = document.getElementById('results-list');
+  const incomingEl = document.getElementById('incoming-list');
+  resultsEl.innerHTML  = '';
+  if (incomingEl) incomingEl.innerHTML = '';
 
   const attacker  = state.attacker;
-  const defender  = currentMon();
+  const foe       = currentMon();
   const atkStats  = getStats(attacker);
-  const defStats  = getStats(defender);
+  const defStats  = getStats(foe);
 
   if (!atkStats || !defStats) {
     resultsEl.innerHTML = '<div class="result-empty">Unknown Pokémon — check spelling</div>';
@@ -481,141 +548,80 @@ function renderResults() {
 
   updateAttackerStats();
 
-  const defData  = POKEMON_DATA[defender.name];
+  const defData  = POKEMON_DATA[foe.name];
   const defTypes = defData ? [defData[6], defData[7]].filter(Boolean) : [];
 
   // ---- Speed comparison ----
   const speedInfo = compareSpeed(atkStats, defStats, {
     attackerStatus: attacker.status,
-    defStatus: state.options.defStatus,
-    tailwindAtk: state.options.tailwindAtk,
-    tailwindDef: state.options.tailwindDef,
-    badgeSpe: state.options.badgeSpe,
-    weather: state.options.weather,
+    defStatus:      state.options.defStatus,
+    tailwindAtk:    state.options.tailwindAtk,
+    tailwindDef:    state.options.tailwindDef,
+    weather:        state.options.weather,
   });
   renderSpeedBanner(speedInfo);
-
-  // ---- Entry hazard damage ----
   renderHazardBanner(defStats, defTypes);
-
-  // ---- Weather / Terrain indicator ----
   renderFieldTags();
 
-  // ---- Damage results per move ----
-  const opts = {
+  // ---- Your damage rolls ----
+  const outOpts = {
     attackerItem:   attacker.item,
     attackerStatus: attacker.status,
-    atkStage:       state.options.atkStage,
-    defStage:       state.options.defStage,
+    atkStage:       state.options.myAtkStage,
+    defStage:       state.options.foeDefStage,
     weather:        state.options.weather,
     terrain:        state.options.terrain,
     helpingHand:    state.options.helpingHand,
-    reflect:        state.options.reflect,
-    lightScreen:    state.options.lightScreen,
-    auroraVeil:     state.options.auroraVeil,
+    reflect:        state.options.foeReflect,
+    lightScreen:    state.options.foeLightScreen,
+    auroraVeil:     state.options.foeAuroraVeil,
     defStatus:      state.options.defStatus,
     defCurrentHP:   state.options.defCurrentHP,
-    badgeAtk:       state.options.badgeAtk,
-    badgeSpa:       state.options.badgeSpa,
   };
 
   let hasAnyDamage = false;
-
   attacker.moves.forEach((moveKey, idx) => {
     if (!moveKey) return;
-    const moveOpts = {
-      ...opts,
-      crit:     attacker.moveCrits[idx],
-      hitCount: attacker.moveHits[idx],
-    };
-    const result   = calcDamageRolls(attacker, atkStats, moveKey, defender, defStats, moveOpts);
+    const moveOpts = { ...outOpts, crit: attacker.moveCrits[idx] };
+    const result   = calcDamageRolls(attacker, atkStats, moveKey, foe, defStats, moveOpts);
     const moveData = MOVES[moveKey];
-
-    const card = document.createElement('div');
-    card.className = 'result-card';
-
-    if (!result || !moveData) {
-      card.innerHTML = `<span class="result-move-name">${moveKey}</span><span class="result-detail muted">—</span>`;
-      resultsEl.appendChild(card);
-      return;
-    }
-
-    const [power, mType, cat] = moveData;
-
-    if (result.immune) {
-      card.classList.add('result-immune');
-      card.innerHTML = `<div class="result-top">
-        <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
-        <span class="result-move-name">${moveKey}</span>
-        <span class="ko-tag" style="background:#444;color:#888">Immune</span>
-      </div>`;
-      resultsEl.appendChild(card);
-      return;
-    }
-
-    if (cat === 'X' || power <= 0) {
-      card.innerHTML = `<div class="result-top">
-        <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
-        <span class="result-move-name">${moveKey}</span>
-        <span class="result-label status-label">Status</span>
-      </div>`;
-      resultsEl.appendChild(card);
-      return;
-    }
-
-    hasAnyDamage = true;
-    const koLabel  = getKoLabel(result);
-    const effLabel = getEffectivenessLabel(result.effectiveness);
-    const pctMin   = result.minPct.toFixed(1);
-    const pctMax   = result.maxPct.toFixed(1);
-    const hitStr   = result.hitCount > 1 ? ` (×${result.hitCount})` : '';
-
-    // If tracking current HP, show vs current HP too
-    const isPartialHP = state.options.defCurrentHP != null && state.options.defCurrentHP < defStats.hp;
-    const dmgLine = isPartialHP
-      ? `${result.min} – ${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max HP &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% current HP`
-      : `${result.min} – ${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}% – ${pctMax}%`;
-
-    let koClass = '';
-    if (koLabel === 'OHKO')              koClass = 'ko-ohko';
-    else if (koLabel === 'Possible OHKO') koClass = 'ko-possible';
-    else if (koLabel === '2HKO')          koClass = 'ko-2hko';
-    else if (koLabel === 'Possible 2HKO') koClass = 'ko-possible';
-    else if (koLabel === '3HKO')          koClass = 'ko-3hko';
-
-    let effClass = result.effectiveness > 1 ? 'eff-super' : result.effectiveness < 1 ? 'eff-not' : '';
-    const wTag = result.weatherBoosted ? '<span class="weather-boost-tag">☀/🌧</span>' : result.weatherReduced ? '<span class="weather-reduce-tag">☀/🌧</span>' : '';
-    const tTag = result.terrainBoosted ? '<span class="terrain-boost-tag">⚡ Terrain</span>' : '';
-
-    const barPct = Math.min(100, result.maxPct);
-    const barMin = Math.min(100, result.minPct);
-
-    card.innerHTML = `
-      <div class="result-top">
-        <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
-        <span class="result-move-name">${moveKey}</span>
-        <span class="result-power">${power}${hitStr} BP</span>
-        ${result.stab ? '<span class="stab-tag">STAB</span>' : ''}
-        <span class="eff-tag ${effClass}">${effLabel}</span>
-        ${wTag}${tTag}
-        ${moveOpts.crit ? '<span class="crit-tag">Crit</span>' : ''}
-        ${koLabel ? `<span class="ko-tag ${koClass}">${koLabel}</span>` : ''}
-      </div>
-      <div class="result-dmg">${dmgLine}</div>
-      <div class="result-bar-wrap">
-        <div class="result-bar">
-          <div class="result-bar-max" style="width:${barPct}%"></div>
-          <div class="result-bar-min" style="width:${barMin}%"></div>
-        </div>
-      </div>`;
+    const card = buildResultCard(moveKey, result, moveData, attacker.moveCrits[idx], false);
     resultsEl.appendChild(card);
+    if (result && !result.immune && moveData && moveData[2] !== 'X' && moveData[0] > 0) hasAnyDamage = true;
   });
 
-  if (!hasAnyDamage) {
+  if (!hasAnyDamage && attacker.moves.every(m => !m)) {
     const empty = document.createElement('div');
     empty.className = 'result-empty';
     empty.textContent = 'Enter moves above to see damage calculations.';
     resultsEl.appendChild(empty);
+  }
+
+  // ---- Incoming damage (foe → you) ----
+  if (!incomingEl) return;
+  const inOpts = {
+    attackerItem:   foe.item,
+    attackerStatus: state.options.defStatus,
+    atkStage:       state.options.foeAtkStage,
+    defStage:       state.options.myDefStage,
+    weather:        state.options.weather,
+    terrain:        state.options.terrain,
+    reflect:        state.options.myReflect,
+    lightScreen:    state.options.myLightScreen,
+    auroraVeil:     state.options.myAuroraVeil,
+    defCurrentHP:   null,
+  };
+
+  foe.moves.forEach(moveKey => {
+    if (!moveKey) return;
+    const result   = calcDamageRolls(foe, defStats, moveKey, attacker, atkStats, inOpts);
+    const moveData = MOVES[moveKey];
+    const card = buildResultCard(moveKey, result, moveData, false, true);
+    incomingEl.appendChild(card);
+  });
+
+  if (!foe.moves.some(Boolean)) {
+    incomingEl.innerHTML = '<div class="result-empty">No moves on record.</div>';
   }
 }
 
@@ -637,6 +643,7 @@ function renderSpeedBanner(info) {
   }
   el.innerHTML = html;
   el.className = 'speed-banner ' + cls;
+  el.removeAttribute('hidden');
 }
 
 function renderHazardBanner(defStats, defTypes) {
@@ -648,7 +655,7 @@ function renderHazardBanner(defStats, defTypes) {
     const frac = calcStealthRockDamage(defTypes);
     const dmg  = Math.floor(defStats.hp * frac);
     const eff  = getTypeEffectiveness('Rock', defTypes);
-    const effStr = eff === 1 ? '' : eff > 1 ? ` (${getEffectivenessLabel(eff)} Rock)` : ` (${getEffectivenessLabel(eff)} Rock)`;
+    const effStr = eff !== 1 ? ` (${getEffectivenessLabel(eff)} vs Rock)` : '';
     parts.push(`🪨 Stealth Rock: ${dmg} HP (${(frac*100).toFixed(1)}%)${effStr}`);
   }
   if (state.options.spikes > 0) {
@@ -680,10 +687,9 @@ function renderFieldTags() {
   if (w && w !== 'None') tags.push(`<span class="field-tag weather-tag">${weatherIcons[w]||''} ${w}</span>`);
   if (t && t !== 'None') tags.push(`<span class="field-tag terrain-tag">${terrainIcons[t]||''} ${t} Terrain</span>`);
   if (state.options.helpingHand)  tags.push(`<span class="field-tag">Helping Hand</span>`);
-  if (state.options.tailwindAtk)  tags.push(`<span class="field-tag">Tailwind (Atk)</span>`);
-  if (state.options.tailwindDef)  tags.push(`<span class="field-tag">Tailwind (Def)</span>`);
+  if (state.options.tailwindAtk)  tags.push(`<span class="field-tag">Tailwind (You)</span>`);
+  if (state.options.tailwindDef)  tags.push(`<span class="field-tag">Tailwind (Foe)</span>`);
 
-  if (!tags.length) { el.innerHTML = ''; return; }
   el.innerHTML = tags.join('');
 }
 
@@ -758,7 +764,7 @@ function parseShowdownPaste(text) {
     }
     while (moves.length < 4) moves.push('');
     sets.push({ name:rawName, item, ability, level, nature, evs, ivs, moves,
-                moveCrits:[false,false,false,false], moveHits:[1,1,1,1] });
+                moveCrits:[false,false,false,false] });
   }
   return sets;
 }
@@ -805,7 +811,6 @@ function loadFromBox(idx) {
     ability:mon.ability||'', status:'Healthy',
     ivs:{...mon.ivs}, evs:{...mon.evs}, moves:[...mon.moves],
     moveCrits:[...(mon.moveCrits||[false,false,false,false])],
-    moveHits:[...(mon.moveHits||[1,1,1,1])],
   };
   syncAttackerInputsToState();
   renderBox();

@@ -194,10 +194,6 @@ Jolly Nature
                 <input id="atk-move-0" type="text" placeholder="Earthquake" autocomplete="off" />
               </div>
               <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-0" /> Crit</label>
-              <select id="move-hits-0" class="hits-select" title="Hit count">
-                <option value="1">×1</option><option value="2">×2</option>
-                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
-              </select>
             </div>
             <div class="move-row">
               <div class="field-group move-field">
@@ -205,10 +201,6 @@ Jolly Nature
                 <input id="atk-move-1" type="text" placeholder="Dragon Claw" autocomplete="off" />
               </div>
               <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-1" /> Crit</label>
-              <select id="move-hits-1" class="hits-select" title="Hit count">
-                <option value="1">×1</option><option value="2">×2</option>
-                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
-              </select>
             </div>
             <div class="move-row">
               <div class="field-group move-field">
@@ -216,10 +208,6 @@ Jolly Nature
                 <input id="atk-move-2" type="text" placeholder="Stone Edge" autocomplete="off" />
               </div>
               <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-2" /> Crit</label>
-              <select id="move-hits-2" class="hits-select" title="Hit count">
-                <option value="1">×1</option><option value="2">×2</option>
-                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
-              </select>
             </div>
             <div class="move-row">
               <div class="field-group move-field">
@@ -227,23 +215,21 @@ Jolly Nature
                 <input id="atk-move-3" type="text" placeholder="Swords Dance" autocomplete="off" />
               </div>
               <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-3" /> Crit</label>
-              <select id="move-hits-3" class="hits-select" title="Hit count">
-                <option value="1">×1</option><option value="2">×2</option>
-                <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
-              </select>
             </div>
           </div>
         </div>
 
-        <!-- Attacker Item & Combat Modifiers -->
+        <!-- Item & Modifiers -->
         <div class="panel-section">
           <div class="panel-section-title">Item &amp; Modifiers</div>
+
+          <!-- Item + Status -->
           <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
-            <div class="field-group" style="flex:2">
+            <div class="field-group" style="flex:2;min-width:110px">
               <label>Held Item</label>
               <input id="atk-item" type="text" placeholder="None" autocomplete="off" value="None" />
             </div>
-            <div class="field-group" style="flex:1;min-width:100px">
+            <div class="field-group" style="flex:1;min-width:90px">
               <label>Status</label>
               <select id="atk-status">
                 <option value="Healthy">Healthy</option>
@@ -256,10 +242,26 @@ Jolly Nature
               </select>
             </div>
           </div>
-          <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:12px">
-            <div class="field-group" style="flex:1">
-              <label>Atk Stage</label>
-              <select id="atk-stage" class="stage-select w-full">
+
+          <!-- Stat stages: 2×2 grid with labels -->
+          <div class="stages-block">
+            <div class="stages-col-labels">
+              <span></span>
+              <span class="stage-col-label">Atk Stage</span>
+              <span class="stage-col-label">Def Stage</span>
+            </div>
+            <div class="stages-row">
+              <span class="stage-row-label">You</span>
+              <select id="my-atk-stage" class="stage-select">
+                <option value="-6">-6</option><option value="-5">-5</option>
+                <option value="-4">-4</option><option value="-3">-3</option>
+                <option value="-2">-2</option><option value="-1">-1</option>
+                <option value="0" selected>+0</option>
+                <option value="1">+1</option><option value="2">+2</option>
+                <option value="3">+3</option><option value="4">+4</option>
+                <option value="5">+5</option><option value="6">+6</option>
+              </select>
+              <select id="my-def-stage" class="stage-select">
                 <option value="-6">-6</option><option value="-5">-5</option>
                 <option value="-4">-4</option><option value="-3">-3</option>
                 <option value="-2">-2</option><option value="-1">-1</option>
@@ -269,9 +271,18 @@ Jolly Nature
                 <option value="5">+5</option><option value="6">+6</option>
               </select>
             </div>
-            <div class="field-group" style="flex:1">
-              <label>Def Stage</label>
-              <select id="def-stage" class="stage-select w-full">
+            <div class="stages-row">
+              <span class="stage-row-label">Foe</span>
+              <select id="foe-atk-stage" class="stage-select">
+                <option value="-6">-6</option><option value="-5">-5</option>
+                <option value="-4">-4</option><option value="-3">-3</option>
+                <option value="-2">-2</option><option value="-1">-1</option>
+                <option value="0" selected>+0</option>
+                <option value="1">+1</option><option value="2">+2</option>
+                <option value="3">+3</option><option value="4">+4</option>
+                <option value="5">+5</option><option value="6">+6</option>
+              </select>
+              <select id="foe-def-stage" class="stage-select">
                 <option value="-6">-6</option><option value="-5">-5</option>
                 <option value="-4">-4</option><option value="-3">-3</option>
                 <option value="-2">-2</option><option value="-1">-1</option>
@@ -282,10 +293,25 @@ Jolly Nature
               </select>
             </div>
           </div>
-          <div class="options-row">
-            <label class="opt-check"><input type="checkbox" id="opt-reflect" /> Reflect</label>
-            <label class="opt-check"><input type="checkbox" id="opt-lightscreen" /> Light Screen</label>
-            <label class="opt-check"><input type="checkbox" id="opt-aurora-veil" /> Aurora Veil</label>
+
+          <!-- Screens: two columns -->
+          <div class="screens-two-col">
+            <div class="screen-col">
+              <span class="screen-col-label">Your Screens</span>
+              <label class="opt-check"><input type="checkbox" id="my-reflect" /> Reflect</label>
+              <label class="opt-check"><input type="checkbox" id="my-lightscreen" /> Light Screen</label>
+              <label class="opt-check"><input type="checkbox" id="my-aurora-veil" /> Aurora Veil</label>
+            </div>
+            <div class="screen-col">
+              <span class="screen-col-label">Foe's Screens</span>
+              <label class="opt-check"><input type="checkbox" id="foe-reflect" /> Reflect</label>
+              <label class="opt-check"><input type="checkbox" id="foe-lightscreen" /> Light Screen</label>
+              <label class="opt-check"><input type="checkbox" id="foe-aurora-veil" /> Aurora Veil</label>
+            </div>
+          </div>
+
+          <!-- Misc options -->
+          <div class="options-row" style="margin-top:8px">
             <label class="opt-check"><input type="checkbox" id="opt-helping-hand" /> Helping Hand</label>
           </div>
         </div>
@@ -335,28 +361,6 @@ Jolly Nature
                 <option value="3">3 Layers</option>
               </select>
             </div>
-          </div>
-        </div>
-
-        <!-- Badge Boosts -->
-        <div class="panel-section">
-          <div class="panel-section-title">Badge Boosts (RP)</div>
-          <div class="options-row">
-            <label class="opt-check badge-check" title="Coal Badge: +10% Atk">
-              <input type="checkbox" id="badgeAtk" /> Coal (Atk)
-            </label>
-            <label class="opt-check badge-check" title="Forest Badge: +10% Def">
-              <input type="checkbox" id="badgeDef" /> Forest (Def)
-            </label>
-            <label class="opt-check badge-check" title="Cobble Badge: +10% Spe">
-              <input type="checkbox" id="badgeSpe" /> Cobble (Spe)
-            </label>
-            <label class="opt-check badge-check" title="Fen Badge: +10% SpA">
-              <input type="checkbox" id="badgeSpa" /> Fen (SpA)
-            </label>
-            <label class="opt-check badge-check" title="Relic Badge: +10% SpD">
-              <input type="checkbox" id="badgeSpd" /> Relic (SpD)
-            </label>
           </div>
         </div>
 
@@ -428,7 +432,7 @@ Jolly Nature
         <!-- Defender status + current HP tracking -->
         <div class="def-options-bar">
           <div class="field-group" style="flex:1;min-width:120px">
-            <label>Defender Status</label>
+            <label>Foe Status</label>
             <select id="def-status">
               <option value="Healthy">Healthy</option>
               <option value="Burned">Burned</option>
@@ -456,8 +460,12 @@ Jolly Nature
           <div id="field-tags" class="field-tags-row"></div>
           <div id="speed-banner" class="speed-banner" hidden></div>
           <div id="hazard-banner" class="hazard-banner" hidden></div>
-          <div class="results-header">Damage Results</div>
+
+          <div class="results-header">Your Damage</div>
           <div id="results-list"></div>
+
+          <div class="results-header incoming-header">Incoming Damage</div>
+          <div id="incoming-list"></div>
         </div>
 
       </div>

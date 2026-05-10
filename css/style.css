@@ -942,7 +942,7 @@ body {
 .flex-row { display: flex; gap: 8px; align-items: center; }
 .w-full { width: 100%; }
 
-/* ---- Moves list with per-move controls ---- */
+/* ---- Moves list with per-move crit ---- */
 .moves-list { display: flex; flex-direction: column; gap: 6px; }
 .move-row {
   display: flex;
@@ -956,22 +956,62 @@ body {
   font-size: 0.73rem;
   white-space: nowrap;
 }
-.hits-select {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  padding: 5px 4px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  flex-shrink: 0;
-  width: 44px;
-  cursor: pointer;
-}
-.hits-select:focus { outline: none; border-color: var(--accent); }
 
-/* ---- Badge boost section ---- */
-.badge-check { font-size: 0.74rem; }
+/* ---- Stat stages 2×2 block ---- */
+.stages-block {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stages-col-labels {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr;
+  gap: 6px;
+}
+.stage-col-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-align: center;
+}
+.stages-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+}
+.stage-row-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--sub);
+  text-align: right;
+  padding-right: 2px;
+}
+
+/* ---- Screens two-column ---- */
+.screens-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.screen-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.screen-col-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 2px;
+  display: block;
+}
 
 /* ---- Defender options bar ---- */
 .def-options-bar {
@@ -1121,4 +1161,27 @@ body {
   color: var(--gold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* ---- Incoming damage section ---- */
+.incoming-header {
+  margin-top: 14px;
+  color: var(--red);
+}
+.incoming-header::after {
+  background: rgba(224,85,85,0.2);
+}
+.incoming-card {
+  border-color: rgba(224,85,85,0.2);
+}
+.incoming-card .result-bar-min {
+  background: var(--red);
+}
+.incoming-card .result-bar-max {
+  background: rgba(224,85,85,0.25);
+}
+#incoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
