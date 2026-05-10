@@ -47,6 +47,9 @@ const state = {
     // Power Trick (Atk/Def swapped)
     myPowerTrick:  false,
     foePowerTrick: false,
+    // Ability activation toggles
+    flashFireActive: false, // attacker's Flash Fire triggered → 1.5× Fire
+    atkLowHP:        false, // attacker HP ≤ 1/3 → Blaze/Torrent/Overgrow/Swarm
     // Your screens (reduce incoming damage to you)
     myReflect:     false,
     myLightScreen: false,
@@ -133,6 +136,7 @@ function resetAttacker() {
     foeReflect:false, foeLightScreen:false, foeAuroraVeil:false,
     stealthRock:false, spikes:0,
     defStatus:'Healthy', defCurrentHP:null,
+    flashFireActive:false, atkLowHP:false,
   };
   syncAttackerInputsToState();
   syncOptionsToUI();
@@ -209,6 +213,19 @@ function setupAutocomplete(inputEl, dataList, onSelect) {
 function bindAttackerInputs() {
   const pokemonNames = Object.keys(POKEMON_DATA);
   const moveNames    = Object.keys(MOVES);
+  const abilityNames = [
+    'Adaptability','Battle Armor','Blaze','Chlorophyll','Clear Body',
+    'Download','Drought','Dry Skin','Filter','Flash Fire','Flower Gift',
+    'Fur Coat','Guts','Heatproof','Huge Power','Hustle','Hydration',
+    'Intimidate','Iron Fist','Levitate','Lightning Rod','Magic Guard',
+    'Marvel Scale','Motor Drive','Multiscale','Natural Cure','Overgrow',
+    'Poison Heal','Pressure','Pure Power','Quick Feet','Reckless',
+    'Rock Head','Sand Force','Sand Rush','Sand Stream','Sand Veil',
+    'Sap Sipper','Shadow Shield','Snow Warning','Sniper','Solar Power',
+    'Solid Rock','Speed Boost','Static','Steadfast','Storm Drain',
+    'Sturdy','Swarm','Swift Swim','Technician','Thick Fat','Tinted Lens',
+    'Torrent','Unburden','Volt Absorb','Water Absorb','Wonder Guard',
+  ];
   const itemNames    = [
     'None','Life Orb','Choice Band','Choice Specs','Expert Belt',
     'Muscle Band','Wise Glasses','Leftovers','Focus Sash','Sitrus Berry',
@@ -221,6 +238,12 @@ function bindAttackerInputs() {
   nameInput.addEventListener('change', () => {
     if (POKEMON_DATA[nameInput.value]) { state.attacker.name = nameInput.value; updateAttackerStats(); renderResults(); }
   });
+
+  const abilityInput = document.getElementById('atk-ability');
+  if (abilityInput) {
+    setupAutocomplete(abilityInput, abilityNames, v => { state.attacker.ability = v; renderResults(); });
+    abilityInput.addEventListener('change', () => { state.attacker.ability = abilityInput.value; renderResults(); });
+  }
 
   document.getElementById('atk-level').addEventListener('input', e => {
     state.attacker.level = Math.max(1, Math.min(100, parseInt(e.target.value)||50));
@@ -300,6 +323,9 @@ function bindOptionsInputs() {
   chk('my-power-trick',    'myPowerTrick');
   chk('foe-power-trick',   'foePowerTrick');
 
+  chk('opt-flash-fire',    'flashFireActive');
+  chk('opt-atk-low-hp',    'atkLowHP');
+
   chk('my-reflect',        'myReflect');
   chk('my-lightscreen',    'myLightScreen');
   chk('my-aurora-veil',    'myAuroraVeil');
@@ -356,6 +382,7 @@ function syncAttackerInputsToState() {
   set('atk-nature', a.nature);
   set('atk-item', a.item);
   set('atk-status', a.status);
+  set('atk-ability', a.ability || '');
   for (let i = 0; i < 4; i++) {
     set(`atk-move-${i}`, a.moves[i] || '');
     const crit = document.getElementById(`move-crit-${i}`);
@@ -398,6 +425,8 @@ function syncOptionsToUI() {
   set('foe-lightscreen',  o.foeLightScreen, true);
   set('foe-aurora-veil',  o.foeAuroraVeil,  true);
   set('def-status',       o.defStatus);
+  set('opt-flash-fire',   o.flashFireActive, true);
+  set('opt-atk-low-hp',   o.atkLowHP,        true);
 }
 
 // ---- Main render ----
@@ -609,12 +638,15 @@ function renderResults() {
 
   // Speed comparison
   const speedInfo = compareSpeed(atkStats, defStats, {
-    attackerStatus: attacker.status,
-    defStatus:      state.options.defStatus,
-    tailwindAtk:    state.options.tailwindAtk,
-    tailwindDef:    state.options.tailwindDef,
-    atkSpeStage:    state.options.myStages.spe,
-    defSpeStage:    state.options.foeStages.spe,
+    attackerAbility: attacker.ability || '',
+    defenderAbility: foe.ability || '',
+    attackerStatus:  attacker.status,
+    defStatus:       state.options.defStatus,
+    tailwindAtk:     state.options.tailwindAtk,
+    tailwindDef:     state.options.tailwindDef,
+    atkSpeStage:     state.options.myStages.spe,
+    defSpeStage:     state.options.foeStages.spe,
+    weather:         state.options.weather,
   });
   renderSpeedBanner(speedInfo);
   renderHazardBanner(defStats, defTypes);
@@ -622,22 +654,26 @@ function renderResults() {
 
   // ---- Your outgoing damage ----
   const baseOutOpts = {
-    attackerItem:   attacker.item,
-    attackerStatus: attacker.status,
-    weather:        state.options.weather,
-    terrain:        state.options.terrain,
-    helpingHand:    state.options.myHelpingHand,
-    reflect:        state.options.foeReflect,
-    lightScreen:    state.options.foeLightScreen,
-    auroraVeil:     state.options.foeAuroraVeil,
-    defStatus:      state.options.defStatus,
-    defCurrentHP:   state.options.defCurrentHP,
-    switching:      state.options.foeSwitch,
-    doubles:        state.options.doubles,
-    flowerGiftAtk:  state.options.myFlowerGift,
-    flowerGiftDef:  state.options.foeFlowerGift,
-    powerTrickAtk:  state.options.myPowerTrick,
-    powerTrickDef:  state.options.foePowerTrick,
+    attackerAbility: attacker.ability || '',
+    defenderAbility: foe.ability || '',
+    attackerItem:    attacker.item,
+    attackerStatus:  attacker.status,
+    weather:         state.options.weather,
+    terrain:         state.options.terrain,
+    helpingHand:     state.options.myHelpingHand,
+    reflect:         state.options.foeReflect,
+    lightScreen:     state.options.foeLightScreen,
+    auroraVeil:      state.options.foeAuroraVeil,
+    defStatus:       state.options.defStatus,
+    defCurrentHP:    state.options.defCurrentHP,
+    switching:       state.options.foeSwitch,
+    doubles:         state.options.doubles,
+    flowerGiftAtk:   state.options.myFlowerGift,
+    flowerGiftDef:   state.options.foeFlowerGift,
+    powerTrickAtk:   state.options.myPowerTrick,
+    powerTrickDef:   state.options.foePowerTrick,
+    flashFireActive: state.options.flashFireActive,
+    atkLowHP:        state.options.atkLowHP,
   };
 
   attacker.moves.forEach((moveKey, idx) => {
@@ -662,21 +698,24 @@ function renderResults() {
   if (!incomingEl) return;
 
   const baseInOpts = {
-    attackerItem:   foe.item,
-    attackerStatus: state.options.defStatus,
-    weather:        state.options.weather,
-    terrain:        state.options.terrain,
-    helpingHand:    state.options.foeHelpingHand,
-    reflect:        state.options.myReflect,
-    lightScreen:    state.options.myLightScreen,
-    auroraVeil:     state.options.myAuroraVeil,
-    defCurrentHP:   null,
-    switching:      state.options.mySwitch,
-    doubles:        state.options.doubles,
-    flowerGiftAtk:  state.options.foeFlowerGift,
-    flowerGiftDef:  state.options.myFlowerGift,
-    powerTrickAtk:  state.options.foePowerTrick,
-    powerTrickDef:  state.options.myPowerTrick,
+    attackerAbility: foe.ability || '',
+    defenderAbility: attacker.ability || '',
+    attackerItem:    foe.item,
+    attackerStatus:  state.options.defStatus,
+    defStatus:       attacker.status,
+    weather:         state.options.weather,
+    terrain:         state.options.terrain,
+    helpingHand:     state.options.foeHelpingHand,
+    reflect:         state.options.myReflect,
+    lightScreen:     state.options.myLightScreen,
+    auroraVeil:      state.options.myAuroraVeil,
+    defCurrentHP:    null,
+    switching:       state.options.mySwitch,
+    doubles:         state.options.doubles,
+    flowerGiftAtk:   state.options.foeFlowerGift,
+    flowerGiftDef:   state.options.myFlowerGift,
+    powerTrickAtk:   state.options.foePowerTrick,
+    powerTrickDef:   state.options.myPowerTrick,
   };
 
   foe.moves.forEach(moveKey => {

@@ -2,6 +2,20 @@
 // DAMAGE CALCULATOR - Gen 4 (Renegade Platinum) mechanics
 // ============================================================
 
+const IRON_FIST_MOVES = new Set([
+  'Fire Punch','Thunder Punch','Ice Punch','Drain Punch','Mach Punch',
+  'Shadow Punch','Bullet Punch',
+]);
+
+const RECKLESS_MOVES = new Set([
+  'Brave Bird','Double-Edge','Flare Blitz','Head Smash','Submission',
+  'Volt Tackle','Wild Charge','Wood Hammer',
+]);
+
+const BLAZE_ABILITY_MAP = {
+  Blaze:'Fire', Torrent:'Water', Overgrow:'Grass', Swarm:'Bug',
+};
+
 function calcStat(base, iv, ev, level, natureMult, isHP) {
   if (isHP) {
     return Math.floor((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10;
@@ -87,24 +101,26 @@ function getParaSpeedMod(status) {
 }
 
 // options supported:
+//   attackerAbility, defenderAbility
 //   attackerItem, attackerStatus
-//   atkStage, defStage          — pre-resolved to the correct stat's stage (Atk vs SpA, Def vs SpD)
+//   atkStage, defStage          — pre-resolved to the correct stat's stage
 //   weather, terrain
 //   reflect, lightScreen, auroraVeil
 //   helpingHand                 — 1.5× boost on attacker's move
 //   crit, hitCount
 //   doubles                     — spread damage −25%
 //   switching                   — defender is switching out (Pursuit 2× power)
-//   powerTrickAtk               — attacker's Atk/Def are swapped
-//   powerTrickDef               — defender's Atk/Def are swapped
-//   flowerGiftAtk               — attacker benefits from Flower Gift (Atk ×1.5 in sun, physical)
-//   flowerGiftDef               — defender benefits from Flower Gift (SpD ×1.5 in sun, special)
-//   defCurrentHP
+//   powerTrickAtk / powerTrickDef
+//   flowerGiftAtk / flowerGiftDef
+//   flashFireActive             — attacker's Flash Fire triggered (1.5× Fire)
+//   atkLowHP                    — attacker HP ≤ 1/3 (triggers Blaze/Torrent/Overgrow/Swarm)
+//   defCurrentHP, defStatus
 function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, options = {}) {
   const moveData = MOVES[moveKey];
   if (!moveData) return null;
 
   let [basePower, moveType, category] = moveData;
+  const origBP = basePower; // original BP for Technician check
 
   if (category === 'X') return null;
   if (basePower <= 0) return null;
@@ -125,6 +141,29 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
   const defTypes = defData ? [defData[6], defData[7]].filter(Boolean) : [];
   const atkTypes = atkData ? [atkData[6], atkData[7]].filter(Boolean) : [];
 
+  const atkAbility = options.attackerAbility || '';
+  const defAbility = options.defenderAbility || '';
+
+  // === Defender ability immunities (override type chart) ===
+  if (defAbility === 'Levitate' && moveType === 'Ground')
+    return { immune: true, effectiveness: 0 };
+  if ((defAbility === 'Water Absorb' || defAbility === 'Storm Drain' || defAbility === 'Dry Skin') && moveType === 'Water')
+    return { immune: true, effectiveness: 0 };
+  if ((defAbility === 'Volt Absorb' || defAbility === 'Lightning Rod' || defAbility === 'Motor Drive') && moveType === 'Electric')
+    return { immune: true, effectiveness: 0 };
+  if (defAbility === 'Flash Fire' && moveType === 'Fire')
+    return { immune: true, effectiveness: 0 };
+  if (defAbility === 'Sap Sipper' && moveType === 'Grass')
+    return { immune: true, effectiveness: 0 };
+
+  const typeEff = getTypeEffectiveness(moveType, defTypes);
+  if (typeEff === 0) return { immune: true, effectiveness: 0 };
+
+  // Wonder Guard: only super effective hits work
+  if (defAbility === 'Wonder Guard' && typeEff <= 1)
+    return { immune: true, effectiveness: typeEff };
+
+  // === Attacker stat ===
   let atkStat = isPhysical ? effAtk.atk : effAtk.spa;
 
   // Item boosts on attack stat
@@ -135,8 +174,28 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
   const inSun = options.weather === 'Sun' || options.weather === 'Harsh Sunshine';
   if (options.flowerGiftAtk && inSun && isPhysical) atkStat = Math.floor(atkStat * 1.5);
 
-  // Burn halves physical attack
-  atkStat = Math.floor(atkStat * getBurnMod(options.attackerStatus || 'Healthy', category));
+  // Guts: 1.5× Atk when statused, negates burn penalty
+  const isStatused = ['Burned','Poisoned','Badly Poisoned','Paralyzed','Asleep','Frozen'].includes(options.attackerStatus || '');
+  if (atkAbility === 'Guts' && isStatused && isPhysical) {
+    atkStat = Math.floor(atkStat * 1.5); // no burn halving applied
+  } else {
+    atkStat = Math.floor(atkStat * getBurnMod(options.attackerStatus || 'Healthy', category));
+  }
+
+  // Pure Power / Huge Power: 2× Atk (physical)
+  if ((atkAbility === 'Pure Power' || atkAbility === 'Huge Power') && isPhysical) {
+    atkStat = atkStat * 2;
+  }
+
+  // Hustle: 1.5× Atk (physical)
+  if (atkAbility === 'Hustle' && isPhysical) {
+    atkStat = Math.floor(atkStat * 1.5);
+  }
+
+  // Solar Power: 1.5× SpA in Sun
+  if (atkAbility === 'Solar Power' && inSun && !isPhysical) {
+    atkStat = Math.floor(atkStat * 1.5);
+  }
 
   // Stat stages (caller resolves correct stat's stage before passing)
   const atkStage = options.atkStage || 0;
@@ -145,22 +204,68 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
   const defMult  = defStage >= 0 ? (2 + defStage) / 2 : 2 / (2 - defStage);
   const atkStatMod = Math.floor(atkStat * atkMult);
 
-  // Defender stat
+  // === Defender stat ===
   let defStatBase = isPhysical ? effDef.def : effDef.spd;
   if (!isPhysical) defStatBase = Math.floor(defStatBase * getSandSpDMod(options.weather || 'None', defTypes));
 
   // Flower Gift: +50% SpD in sun (special only)
   if (options.flowerGiftDef && inSun && !isPhysical) defStatBase = Math.floor(defStatBase * 1.5);
 
+  // Marvel Scale: 1.5× Def when statused
+  const defIsStatused = ['Burned','Poisoned','Badly Poisoned','Paralyzed','Asleep','Frozen'].includes(options.defStatus || '');
+  if (defAbility === 'Marvel Scale' && defIsStatused && isPhysical) {
+    defStatBase = Math.floor(defStatBase * 1.5);
+  }
+
   const defStatFinal = Math.floor(defStatBase * defMult);
 
+  // === Base power modifications ===
+  // Facade: 140 BP when attacker is statused
+  if (moveKey === 'Facade' && isStatused) basePower = 140;
+
+  // Venoshock: 130 BP when target is poisoned
+  if (moveKey === 'Venoshock' && (options.defStatus === 'Poisoned' || options.defStatus === 'Badly Poisoned')) {
+    basePower = 130;
+  }
+
+  // Technician: 1.5× for moves with original BP ≤ 60
+  if (atkAbility === 'Technician' && origBP > 0 && origBP <= 60) {
+    basePower = Math.floor(basePower * 1.5);
+  }
+
+  // Iron Fist: 1.2× for punching moves
+  if (atkAbility === 'Iron Fist' && IRON_FIST_MOVES.has(moveKey)) {
+    basePower = Math.floor(basePower * 1.2);
+  }
+
+  // Reckless: 1.2× for recoil moves
+  if (atkAbility === 'Reckless' && RECKLESS_MOVES.has(moveKey)) {
+    basePower = Math.floor(basePower * 1.2);
+  }
+
+  // Blaze / Torrent / Overgrow / Swarm: 1.5× when HP ≤ 1/3
+  const blazeType = BLAZE_ABILITY_MAP[atkAbility];
+  if (blazeType && options.atkLowHP && moveType === blazeType) {
+    basePower = Math.floor(basePower * 1.5);
+  }
+
+  // Flash Fire (activated): 1.5× Fire
+  if (atkAbility === 'Flash Fire' && options.flashFireActive && moveType === 'Fire') {
+    basePower = Math.floor(basePower * 1.5);
+  }
+
+  // Sand Force: 1.3× Rock/Steel/Ground in Sand
+  if (atkAbility === 'Sand Force' && options.weather === 'Sand' &&
+      (moveType === 'Rock' || moveType === 'Steel' || moveType === 'Ground')) {
+    basePower = Math.floor(basePower * 1.3);
+  }
+
+  // === Base damage formula ===
   const level = attacker.level;
   const base = Math.floor(Math.floor(Math.floor(2 * level / 5 + 2) * basePower * atkStatMod / defStatFinal) / 50) + 2;
 
-  const typeEff = getTypeEffectiveness(moveType, defTypes);
-  if (typeEff === 0) return { immune: true, effectiveness: 0 };
-
-  const stab       = hasSTAB(moveType, atkTypes) ? 1.5 : 1.0;
+  const typeEff2 = typeEff; // alias for clarity in return
+  const stab       = hasSTAB(moveType, atkTypes) ? (atkAbility === 'Adaptability' ? 2.0 : 1.5) : 1.0;
   const weatherMod = getWeatherMod(options.weather || 'None', moveType);
   const terrainMod = getTerrainMod(options.terrain || 'None', moveType);
 
@@ -177,17 +282,39 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
   if (options.lightScreen && !isPhysical) screenMod *= 0.5;
   if (options.auroraVeil)                 screenMod *= 0.5;
 
-  // Helping Hand (1.5× on this move)
   const helpingHandMod = options.helpingHand ? 1.5 : 1.0;
-
-  // Critical hit (2× in Gen 4, ignores screens and negative atk stages)
-  const critMod = options.crit ? 2.0 : 1.0;
-
-  // Multi-hit
+  // Sniper: crits deal 3× instead of 2×
+  const critMod = options.crit ? (atkAbility === 'Sniper' ? 3.0 : 2.0) : 1.0;
   const hitCount = Math.max(1, parseInt(options.hitCount) || 1);
-
-  // Doubles spread damage −25%
   const spreadMod = options.doubles ? 0.75 : 1.0;
+
+  // === Ability-based final damage modifiers ===
+  let abilityAtkMod = 1.0;
+  let abilityDefMod = 1.0;
+
+  // Tinted Lens: 2× for not-very-effective moves
+  if (atkAbility === 'Tinted Lens' && typeEff < 1) abilityAtkMod *= 2.0;
+
+  // Filter / Solid Rock: 0.75× for super effective
+  if ((defAbility === 'Filter' || defAbility === 'Solid Rock') && typeEff > 1) abilityDefMod *= 0.75;
+
+  // Thick Fat: 0.5× Fire and Ice
+  if (defAbility === 'Thick Fat' && (moveType === 'Fire' || moveType === 'Ice')) abilityDefMod *= 0.5;
+
+  // Heatproof: 0.5× Fire
+  if (defAbility === 'Heatproof' && moveType === 'Fire') abilityDefMod *= 0.5;
+
+  // Dry Skin: 1.25× Fire (Water immunity already handled above)
+  if (defAbility === 'Dry Skin' && moveType === 'Fire') abilityDefMod *= 1.25;
+
+  // Multiscale / Shadow Shield: 0.5× at full HP
+  const defHP     = defStats.hp;
+  const currentHP = (options.defCurrentHP != null && options.defCurrentHP > 0)
+    ? options.defCurrentHP : defHP;
+  if ((defAbility === 'Multiscale' || defAbility === 'Shadow Shield') &&
+      (options.defCurrentHP == null || options.defCurrentHP >= defHP)) {
+    abilityDefMod *= 0.5;
+  }
 
   // 16 random rolls (85–100)
   const rolls = [];
@@ -205,16 +332,15 @@ function calcDamageRolls(attacker, atkStats, moveKey, defenderMon, defStats, opt
     dmg = Math.floor(dmg * screenMod);
     dmg = Math.floor(dmg * helpingHandMod);
     dmg = Math.floor(dmg * critMod);
+    dmg = Math.floor(dmg * abilityAtkMod);
+    dmg = Math.floor(dmg * abilityDefMod);
     dmg = Math.floor(dmg * (85 + i) / 100);
     dmg = Math.max(1, dmg) * hitCount;
     rolls.push(dmg);
   }
 
-  const min       = rolls[0];
-  const max       = rolls[15];
-  const defHP     = defStats.hp;
-  const currentHP = (options.defCurrentHP != null && options.defCurrentHP > 0)
-    ? options.defCurrentHP : defHP;
+  const min = rolls[0];
+  const max = rolls[15];
 
   return {
     immune: false,
@@ -265,8 +391,16 @@ function compareSpeed(atkStats, defStats, options = {}) {
   let atkSpe = atkStats.spe;
   let defSpe = defStats.spe;
 
-  if (options.attackerStatus === 'Paralyzed') atkSpe = Math.floor(atkSpe * 0.25);
-  if (options.defStatus      === 'Paralyzed') defSpe = Math.floor(defSpe * 0.25);
+  const atkAbility = options.attackerAbility || '';
+  const defAbility = options.defenderAbility || '';
+
+  // Paralysis — Quick Feet negates it instead of being penalised
+  if (options.attackerStatus === 'Paralyzed') {
+    if (atkAbility !== 'Quick Feet') atkSpe = Math.floor(atkSpe * 0.25);
+  }
+  if (options.defStatus === 'Paralyzed') {
+    if (defAbility !== 'Quick Feet') defSpe = Math.floor(defSpe * 0.25);
+  }
 
   if (options.tailwindAtk) atkSpe *= 2;
   if (options.tailwindDef) defSpe *= 2;
@@ -277,6 +411,21 @@ function compareSpeed(atkStats, defStats, options = {}) {
   const dSpeMult  = dSpeStage >= 0 ? (2 + dSpeStage) / 2 : 2 / (2 - dSpeStage);
   atkSpe = Math.floor(atkSpe * aSpeMult);
   defSpe = Math.floor(defSpe * dSpeMult);
+
+  // Weather-based speed doubling
+  const weather = options.weather || 'None';
+  if (atkAbility === 'Chlorophyll' && (weather === 'Sun' || weather === 'Harsh Sunshine')) atkSpe *= 2;
+  if (atkAbility === 'Swift Swim'  && (weather === 'Rain' || weather === 'Heavy Rain'))    atkSpe *= 2;
+  if (atkAbility === 'Sand Rush'   && weather === 'Sand') atkSpe *= 2;
+  if (defAbility === 'Chlorophyll' && (weather === 'Sun' || weather === 'Harsh Sunshine')) defSpe *= 2;
+  if (defAbility === 'Swift Swim'  && (weather === 'Rain' || weather === 'Heavy Rain'))    defSpe *= 2;
+  if (defAbility === 'Sand Rush'   && weather === 'Sand') defSpe *= 2;
+
+  // Quick Feet: 1.5× when statused (paralysis already not penalised above)
+  const atkStatused = options.attackerStatus && options.attackerStatus !== 'Healthy';
+  const defStatused = options.defStatus      && options.defStatus      !== 'Healthy';
+  if (atkAbility === 'Quick Feet' && atkStatused) atkSpe = Math.floor(atkSpe * 1.5);
+  if (defAbility === 'Quick Feet' && defStatused) defSpe = Math.floor(defSpe * 1.5);
 
   return { atkSpe, defSpe, faster: atkSpe > defSpe ? 'atk' : atkSpe < defSpe ? 'def' : 'tie' };
 }
