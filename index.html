@@ -11,7 +11,6 @@
 </head>
 <body>
 
-<!-- Header -->
 <header class="header">
   <div>
     <div class="header-logo">⚔ Renegade Platinum Calc</div>
@@ -23,7 +22,6 @@
   <button class="btn btn-sm" id="btn-export" style="margin-left:4px">⬇ Export</button>
 </header>
 
-<!-- Import Modal -->
 <div id="import-modal" hidden role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
   <div id="import-modal-backdrop" class="modal-backdrop"></div>
   <div class="modal-dialog">
@@ -32,7 +30,7 @@
       <button class="modal-close" id="btn-import-cancel" aria-label="Close">×</button>
     </div>
     <div class="modal-body">
-      <p class="modal-hint">Paste a Pokémon Showdown export below. Separate multiple Pokémon with a blank line. Up to 30 Pokémon supported.</p>
+      <p class="modal-hint">Paste a Pokémon Showdown export below. Separate multiple Pokémon with a blank line.</p>
       <div class="modal-example">
         <span class="modal-example-label">Example format:</span>
         <pre class="modal-example-pre">Garchomp @ Choice Scarf
@@ -55,17 +53,12 @@ Jolly Nature
 </div>
 
 <div class="app-body">
-
-  <!-- Sidebar: trainer list -->
   <nav class="sidebar">
     <div class="sidebar-title">Trainers</div>
     <div id="trainer-list"></div>
   </nav>
 
-  <!-- Main -->
   <div class="main">
-
-    <!-- Trainer navigation bar -->
     <div class="trainer-nav">
       <div class="trainer-info">
         <div class="trainer-name-row">
@@ -87,17 +80,15 @@ Jolly Nature
       </div>
     </div>
 
-    <!-- Mon dots -->
     <div class="mon-dots-row">
       <span class="mon-dots-label">Team:</span>
       <div id="mon-dots"></div>
       <span class="trainer-counter" id="def-mon-counter" style="margin-left:auto">1 / 6</span>
     </div>
 
-    <!-- Panels -->
     <div class="panels">
 
-      <!-- Left: Attacker -->
+      <!-- ==================== LEFT PANEL ==================== -->
       <div class="panel-attacker">
 
         <!-- Identity -->
@@ -126,13 +117,15 @@ Jolly Nature
           </div>
         </div>
 
-        <!-- Stats -->
+        <!-- Stats with inline stage controls -->
         <div class="panel-section">
           <div class="panel-section-title">Stats</div>
           <div class="stat-label-row" style="margin-bottom:4px">
             <span></span><span style="text-align:right;padding-right:2px">EV</span><span>IV</span>
           </div>
           <div class="stats-grid">
+
+            <!-- HP — no stage -->
             <div class="stat-cell">
               <span class="stat-name">HP</span>
               <span class="stat-value" id="atk-stat-hp">—</span>
@@ -141,46 +134,92 @@ Jolly Nature
                 <input id="atk-iv-hp" type="number" min="0" max="31" placeholder="31" title="HP IVs" />
               </div>
             </div>
+
+            <!-- Atk -->
             <div class="stat-cell">
-              <span class="stat-name">Atk</span>
+              <div class="stat-header">
+                <span class="stat-name">Atk</span>
+                <div class="stage-ctrl">
+                  <button class="stage-btn" data-side="my" data-stat="atk" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-my-atk">+0</span>
+                  <button class="stage-btn" data-side="my" data-stat="atk" data-delta="1">+</button>
+                </div>
+              </div>
               <span class="stat-value" id="atk-stat-atk">—</span>
               <div class="stat-inputs">
                 <input id="atk-ev-atk" type="number" min="0" max="252" placeholder="0" title="Atk EVs" />
                 <input id="atk-iv-atk" type="number" min="0" max="31" placeholder="31" title="Atk IVs" />
               </div>
             </div>
+
+            <!-- Def -->
             <div class="stat-cell">
-              <span class="stat-name">Def</span>
+              <div class="stat-header">
+                <span class="stat-name">Def</span>
+                <div class="stage-ctrl">
+                  <button class="stage-btn" data-side="my" data-stat="def" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-my-def">+0</span>
+                  <button class="stage-btn" data-side="my" data-stat="def" data-delta="1">+</button>
+                </div>
+              </div>
               <span class="stat-value" id="atk-stat-def">—</span>
               <div class="stat-inputs">
                 <input id="atk-ev-def" type="number" min="0" max="252" placeholder="0" title="Def EVs" />
                 <input id="atk-iv-def" type="number" min="0" max="31" placeholder="31" title="Def IVs" />
               </div>
             </div>
+
+            <!-- SpA -->
             <div class="stat-cell">
-              <span class="stat-name">SpA</span>
+              <div class="stat-header">
+                <span class="stat-name">SpA</span>
+                <div class="stage-ctrl">
+                  <button class="stage-btn" data-side="my" data-stat="spa" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-my-spa">+0</span>
+                  <button class="stage-btn" data-side="my" data-stat="spa" data-delta="1">+</button>
+                </div>
+              </div>
               <span class="stat-value" id="atk-stat-spa">—</span>
               <div class="stat-inputs">
                 <input id="atk-ev-spa" type="number" min="0" max="252" placeholder="0" title="SpA EVs" />
                 <input id="atk-iv-spa" type="number" min="0" max="31" placeholder="31" title="SpA IVs" />
               </div>
             </div>
+
+            <!-- SpD -->
             <div class="stat-cell">
-              <span class="stat-name">SpD</span>
+              <div class="stat-header">
+                <span class="stat-name">SpD</span>
+                <div class="stage-ctrl">
+                  <button class="stage-btn" data-side="my" data-stat="spd" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-my-spd">+0</span>
+                  <button class="stage-btn" data-side="my" data-stat="spd" data-delta="1">+</button>
+                </div>
+              </div>
               <span class="stat-value" id="atk-stat-spd">—</span>
               <div class="stat-inputs">
                 <input id="atk-ev-spd" type="number" min="0" max="252" placeholder="0" title="SpD EVs" />
                 <input id="atk-iv-spd" type="number" min="0" max="31" placeholder="31" title="SpD IVs" />
               </div>
             </div>
+
+            <!-- Spe -->
             <div class="stat-cell">
-              <span class="stat-name">Spe</span>
+              <div class="stat-header">
+                <span class="stat-name">Spe</span>
+                <div class="stage-ctrl">
+                  <button class="stage-btn" data-side="my" data-stat="spe" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-my-spe">+0</span>
+                  <button class="stage-btn" data-side="my" data-stat="spe" data-delta="1">+</button>
+                </div>
+              </div>
               <span class="stat-value" id="atk-stat-spe">—</span>
               <div class="stat-inputs">
                 <input id="atk-ev-spe" type="number" min="0" max="252" placeholder="0" title="Spe EVs" />
                 <input id="atk-iv-spe" type="number" min="0" max="31" placeholder="31" title="Spe IVs" />
               </div>
             </div>
+
           </div>
         </div>
 
@@ -193,7 +232,7 @@ Jolly Nature
                 <label>Move 1</label>
                 <input id="atk-move-0" type="text" placeholder="Earthquake" autocomplete="off" />
               </div>
-              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-0" /> Crit</label>
+              <label class="opt-check move-crit-check"><input type="checkbox" id="move-crit-0" /> Crit</label>
               <select id="move-hits-0" class="hits-select" title="Hit count">
                 <option value="1">×1</option><option value="2">×2</option>
                 <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
@@ -204,7 +243,7 @@ Jolly Nature
                 <label>Move 2</label>
                 <input id="atk-move-1" type="text" placeholder="Dragon Claw" autocomplete="off" />
               </div>
-              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-1" /> Crit</label>
+              <label class="opt-check move-crit-check"><input type="checkbox" id="move-crit-1" /> Crit</label>
               <select id="move-hits-1" class="hits-select" title="Hit count">
                 <option value="1">×1</option><option value="2">×2</option>
                 <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
@@ -215,7 +254,7 @@ Jolly Nature
                 <label>Move 3</label>
                 <input id="atk-move-2" type="text" placeholder="Stone Edge" autocomplete="off" />
               </div>
-              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-2" /> Crit</label>
+              <label class="opt-check move-crit-check"><input type="checkbox" id="move-crit-2" /> Crit</label>
               <select id="move-hits-2" class="hits-select" title="Hit count">
                 <option value="1">×1</option><option value="2">×2</option>
                 <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
@@ -226,7 +265,7 @@ Jolly Nature
                 <label>Move 4</label>
                 <input id="atk-move-3" type="text" placeholder="Swords Dance" autocomplete="off" />
               </div>
-              <label class="opt-check move-crit-check" title="Critical hit"><input type="checkbox" id="move-crit-3" /> Crit</label>
+              <label class="opt-check move-crit-check"><input type="checkbox" id="move-crit-3" /> Crit</label>
               <select id="move-hits-3" class="hits-select" title="Hit count">
                 <option value="1">×1</option><option value="2">×2</option>
                 <option value="3">×3</option><option value="4">×4</option><option value="5">×5</option>
@@ -235,11 +274,9 @@ Jolly Nature
           </div>
         </div>
 
-        <!-- Item & Modifiers -->
+        <!-- Item & Screens -->
         <div class="panel-section">
-          <div class="panel-section-title">Item &amp; Modifiers</div>
-
-          <!-- Item + Status -->
+          <div class="panel-section-title">Item &amp; Screens</div>
           <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div class="field-group" style="flex:2;min-width:110px">
               <label>Held Item</label>
@@ -258,59 +295,6 @@ Jolly Nature
               </select>
             </div>
           </div>
-
-          <!-- Stat stages: 2×2 grid with labels -->
-          <div class="stages-block">
-            <div class="stages-col-labels">
-              <span></span>
-              <span class="stage-col-label">Atk Stage</span>
-              <span class="stage-col-label">Def Stage</span>
-            </div>
-            <div class="stages-row">
-              <span class="stage-row-label">You</span>
-              <select id="my-atk-stage" class="stage-select">
-                <option value="-6">-6</option><option value="-5">-5</option>
-                <option value="-4">-4</option><option value="-3">-3</option>
-                <option value="-2">-2</option><option value="-1">-1</option>
-                <option value="0" selected>+0</option>
-                <option value="1">+1</option><option value="2">+2</option>
-                <option value="3">+3</option><option value="4">+4</option>
-                <option value="5">+5</option><option value="6">+6</option>
-              </select>
-              <select id="my-def-stage" class="stage-select">
-                <option value="-6">-6</option><option value="-5">-5</option>
-                <option value="-4">-4</option><option value="-3">-3</option>
-                <option value="-2">-2</option><option value="-1">-1</option>
-                <option value="0" selected>+0</option>
-                <option value="1">+1</option><option value="2">+2</option>
-                <option value="3">+3</option><option value="4">+4</option>
-                <option value="5">+5</option><option value="6">+6</option>
-              </select>
-            </div>
-            <div class="stages-row">
-              <span class="stage-row-label">Foe</span>
-              <select id="foe-atk-stage" class="stage-select">
-                <option value="-6">-6</option><option value="-5">-5</option>
-                <option value="-4">-4</option><option value="-3">-3</option>
-                <option value="-2">-2</option><option value="-1">-1</option>
-                <option value="0" selected>+0</option>
-                <option value="1">+1</option><option value="2">+2</option>
-                <option value="3">+3</option><option value="4">+4</option>
-                <option value="5">+5</option><option value="6">+6</option>
-              </select>
-              <select id="foe-def-stage" class="stage-select">
-                <option value="-6">-6</option><option value="-5">-5</option>
-                <option value="-4">-4</option><option value="-3">-3</option>
-                <option value="-2">-2</option><option value="-1">-1</option>
-                <option value="0" selected>+0</option>
-                <option value="1">+1</option><option value="2">+2</option>
-                <option value="3">+3</option><option value="4">+4</option>
-                <option value="5">+5</option><option value="6">+6</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Screens: two columns -->
           <div class="screens-two-col">
             <div class="screen-col">
               <span class="screen-col-label">Your Screens</span>
@@ -325,14 +309,9 @@ Jolly Nature
               <label class="opt-check"><input type="checkbox" id="foe-aurora-veil" /> Aurora Veil</label>
             </div>
           </div>
-
-          <!-- Misc options -->
-          <div class="options-row" style="margin-top:8px">
-            <label class="opt-check"><input type="checkbox" id="opt-helping-hand" /> Helping Hand</label>
-          </div>
         </div>
 
-        <!-- Field, Weather & Hazards -->
+        <!-- Field & Hazards -->
         <div class="panel-section">
           <div class="panel-section-title">Field &amp; Hazards</div>
           <div class="flex-row" style="margin-bottom:10px;gap:8px">
@@ -380,7 +359,31 @@ Jolly Nature
           </div>
         </div>
 
-        <!-- Box section (hidden until imported) -->
+        <!-- Battle Conditions -->
+        <div class="panel-section">
+          <div class="panel-section-title">Battle Conditions</div>
+          <div class="options-row" style="margin-bottom:10px">
+            <label class="opt-check"><input type="checkbox" id="opt-doubles" /> Doubles (spread −25%)</label>
+          </div>
+          <div class="bc-two-col">
+            <div class="bc-col">
+              <span class="bc-col-label">Your Side</span>
+              <label class="opt-check"><input type="checkbox" id="my-helping-hand" /> Helping Hand</label>
+              <label class="opt-check"><input type="checkbox" id="my-switch" /> Switching Out</label>
+              <label class="opt-check"><input type="checkbox" id="my-flower-gift" /> Flower Gift (☀)</label>
+              <label class="opt-check"><input type="checkbox" id="my-power-trick" /> Power Trick</label>
+            </div>
+            <div class="bc-col">
+              <span class="bc-col-label">Foe's Side</span>
+              <label class="opt-check"><input type="checkbox" id="foe-helping-hand" /> Helping Hand</label>
+              <label class="opt-check"><input type="checkbox" id="foe-switch" /> Switching Out</label>
+              <label class="opt-check"><input type="checkbox" id="foe-flower-gift" /> Flower Gift (☀)</label>
+              <label class="opt-check"><input type="checkbox" id="foe-power-trick" /> Power Trick</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Box -->
         <div id="box-section" class="panel-section" hidden>
           <div class="panel-section-title">My Box</div>
           <div class="box-nav-row">
@@ -395,7 +398,7 @@ Jolly Nature
       </div>
       <!-- end panel-attacker -->
 
-      <!-- Right: Defender + Results -->
+      <!-- ==================== RIGHT PANEL ==================== -->
       <div class="panel-right">
 
         <!-- Defender card -->
@@ -426,17 +429,73 @@ Jolly Nature
           </div>
         </div>
 
-        <!-- Def stats + moves -->
+        <!-- Def stats with inline stage controls + moves -->
         <div class="def-body">
           <div class="def-stats-panel">
             <div class="def-moves-title">Stats (31 IVs / 0 EVs)</div>
             <div class="def-stats-grid">
-              <div class="def-stat-cell"><span class="stat-name">HP</span><span class="stat-value" id="def-stat-hp">—</span></div>
-              <div class="def-stat-cell"><span class="stat-name">Atk</span><span class="stat-value" id="def-stat-atk">—</span></div>
-              <div class="def-stat-cell"><span class="stat-name">Def</span><span class="stat-value" id="def-stat-def">—</span></div>
-              <div class="def-stat-cell"><span class="stat-name">SpA</span><span class="stat-value" id="def-stat-spa">—</span></div>
-              <div class="def-stat-cell"><span class="stat-name">SpD</span><span class="stat-value" id="def-stat-spd">—</span></div>
-              <div class="def-stat-cell"><span class="stat-name">Spe</span><span class="stat-value" id="def-stat-spe">—</span></div>
+
+              <!-- HP — no stage -->
+              <div class="def-stat-cell">
+                <span class="stat-name">HP</span>
+                <span class="stat-value" id="def-stat-hp">—</span>
+              </div>
+
+              <!-- Atk -->
+              <div class="def-stat-cell">
+                <span class="stat-name">Atk</span>
+                <div class="stage-ctrl stage-ctrl-sm">
+                  <button class="stage-btn" data-side="foe" data-stat="atk" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-foe-atk">+0</span>
+                  <button class="stage-btn" data-side="foe" data-stat="atk" data-delta="1">+</button>
+                </div>
+                <span class="stat-value" id="def-stat-atk">—</span>
+              </div>
+
+              <!-- Def -->
+              <div class="def-stat-cell">
+                <span class="stat-name">Def</span>
+                <div class="stage-ctrl stage-ctrl-sm">
+                  <button class="stage-btn" data-side="foe" data-stat="def" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-foe-def">+0</span>
+                  <button class="stage-btn" data-side="foe" data-stat="def" data-delta="1">+</button>
+                </div>
+                <span class="stat-value" id="def-stat-def">—</span>
+              </div>
+
+              <!-- SpA -->
+              <div class="def-stat-cell">
+                <span class="stat-name">SpA</span>
+                <div class="stage-ctrl stage-ctrl-sm">
+                  <button class="stage-btn" data-side="foe" data-stat="spa" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-foe-spa">+0</span>
+                  <button class="stage-btn" data-side="foe" data-stat="spa" data-delta="1">+</button>
+                </div>
+                <span class="stat-value" id="def-stat-spa">—</span>
+              </div>
+
+              <!-- SpD -->
+              <div class="def-stat-cell">
+                <span class="stat-name">SpD</span>
+                <div class="stage-ctrl stage-ctrl-sm">
+                  <button class="stage-btn" data-side="foe" data-stat="spd" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-foe-spd">+0</span>
+                  <button class="stage-btn" data-side="foe" data-stat="spd" data-delta="1">+</button>
+                </div>
+                <span class="stat-value" id="def-stat-spd">—</span>
+              </div>
+
+              <!-- Spe -->
+              <div class="def-stat-cell">
+                <span class="stat-name">Spe</span>
+                <div class="stage-ctrl stage-ctrl-sm">
+                  <button class="stage-btn" data-side="foe" data-stat="spe" data-delta="-1">−</button>
+                  <span class="stage-val" id="stage-foe-spe">+0</span>
+                  <button class="stage-btn" data-side="foe" data-stat="spe" data-delta="1">+</button>
+                </div>
+                <span class="stat-value" id="def-stat-spe">—</span>
+              </div>
+
             </div>
           </div>
           <div class="def-moves-panel">
@@ -445,7 +504,7 @@ Jolly Nature
           </div>
         </div>
 
-        <!-- Defender status + current HP tracking -->
+        <!-- Foe status + HP -->
         <div class="def-options-bar">
           <div class="field-group" style="flex:1;min-width:120px">
             <label>Foe Status</label>
@@ -485,14 +544,9 @@ Jolly Nature
         </div>
 
       </div>
-      <!-- end panel-right -->
-
     </div>
-    <!-- end panels -->
   </div>
-  <!-- end main -->
 </div>
-<!-- end app-body -->
 
 <script src="js/data.js"></script>
 <script src="js/calc.js"></script>

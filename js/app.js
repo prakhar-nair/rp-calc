@@ -2,9 +2,8 @@
 // APP LOGIC
 // ============================================================
 
-const WEATHER_OPTIONS = ['None','Sun','Rain','Sand','Hail','Snow','Fog','Harsh Sunshine','Heavy Rain','Strong Winds'];
-const TERRAIN_OPTIONS = ['None','Electric','Grassy','Misty','Psychic'];
-const STATUS_OPTIONS  = ['Healthy','Burned','Poisoned','Badly Poisoned','Paralyzed','Asleep','Frozen'];
+const STATUS_OPTIONS = ['Healthy','Burned','Poisoned','Badly Poisoned','Paralyzed','Asleep','Frozen'];
+const STAT_KEYS = ['atk','def','spa','spd','spe'];
 
 const state = {
   trainerIdx: 0,
@@ -25,30 +24,41 @@ const state = {
     moveHits:  [1, 1, 1, 1],
   },
   options: {
-    // Stat stages — your pokemon
-    myAtkStage: 0,
-    myDefStage: 0,
-    // Stat stages — foe's pokemon
-    foeAtkStage: 0,
-    foeDefStage: 0,
+    // Per-stat stages for each side
+    myStages:  { atk:0, def:0, spa:0, spd:0, spe:0 },
+    foeStages: { atk:0, def:0, spa:0, spd:0, spe:0 },
     // Field
-    weather:     'None',
-    terrain:     'None',
-    helpingHand: false,
+    weather: 'None',
+    terrain: 'None',
+    // Tailwind
     tailwindAtk: false,
     tailwindDef: false,
-    // Your screens (reduce damage you take from foe)
+    // Doubles
+    doubles: false,
+    // Switching out (Pursuit)
+    mySwitch:  false,
+    foeSwitch: false,
+    // Helping Hand
+    myHelpingHand:  false,
+    foeHelpingHand: false,
+    // Flower Gift (active in Sun)
+    myFlowerGift:  false,
+    foeFlowerGift: false,
+    // Power Trick (Atk/Def swapped)
+    myPowerTrick:  false,
+    foePowerTrick: false,
+    // Your screens (reduce incoming damage to you)
     myReflect:     false,
     myLightScreen: false,
     myAuroraVeil:  false,
-    // Foe's screens (reduce damage you deal to foe)
+    // Foe's screens (reduce your damage to foe)
     foeReflect:     false,
     foeLightScreen: false,
     foeAuroraVeil:  false,
     // Hazards on foe's side
     stealthRock: false,
     spikes: 0,
-    // Foe's status & current HP
+    // Foe status + current HP
     defStatus:    'Healthy',
     defCurrentHP: null,
   },
@@ -94,6 +104,7 @@ function goToMon(idx) {
   state.options.defCurrentHP = null;
   render();
 }
+
 function resetAttacker() {
   state.trainerIdx = 0;
   state.monIdx = 0;
@@ -109,20 +120,57 @@ function resetAttacker() {
     moveHits:[1,1,1,1],
   };
   state.options = {
-    myAtkStage:0, myDefStage:0,
-    foeAtkStage:0, foeDefStage:0,
+    myStages:  {atk:0,def:0,spa:0,spd:0,spe:0},
+    foeStages: {atk:0,def:0,spa:0,spd:0,spe:0},
     weather:'None', terrain:'None',
-    helpingHand:false, tailwindAtk:false, tailwindDef:false,
+    tailwindAtk:false, tailwindDef:false,
+    doubles:false,
+    mySwitch:false, foeSwitch:false,
+    myHelpingHand:false, foeHelpingHand:false,
+    myFlowerGift:false, foeFlowerGift:false,
+    myPowerTrick:false, foePowerTrick:false,
     myReflect:false, myLightScreen:false, myAuroraVeil:false,
     foeReflect:false, foeLightScreen:false, foeAuroraVeil:false,
     stealthRock:false, spikes:0,
     defStatus:'Healthy', defCurrentHP:null,
   };
   syncAttackerInputsToState();
-  syncOptionsInputsToState();
+  syncOptionsToUI();
+  renderAllStages();
   renderBox();
   renderTrainerList();
   render();
+}
+
+// ---- Stage controls ----
+function clampStage(v) { return Math.max(-6, Math.min(6, v)); }
+
+function updateStageDisplay(side, stat) {
+  const val = state.options[side === 'my' ? 'myStages' : 'foeStages'][stat];
+  const el  = document.getElementById(`stage-${side}-${stat}`);
+  if (el) el.textContent = val >= 0 ? `+${val}` : `${val}`;
+  if (el) el.className = 'stage-val' + (val > 0 ? ' stage-pos' : val < 0 ? ' stage-neg' : '');
+}
+
+function renderAllStages() {
+  STAT_KEYS.forEach(s => {
+    updateStageDisplay('my', s);
+    updateStageDisplay('foe', s);
+  });
+}
+
+function bindStageBtns() {
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.stage-btn');
+    if (!btn) return;
+    const side  = btn.dataset.side;
+    const stat  = btn.dataset.stat;
+    const delta = parseInt(btn.dataset.delta);
+    const key   = side === 'my' ? 'myStages' : 'foeStages';
+    state.options[key][stat] = clampStage((state.options[key][stat] || 0) + delta);
+    updateStageDisplay(side, stat);
+    renderResults();
+  });
 }
 
 // ---- Autocomplete ----
@@ -157,11 +205,11 @@ function setupAutocomplete(inputEl, dataList, onSelect) {
   inputEl.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
 }
 
-// ---- Bind all attacker inputs ----
+// ---- Bind attacker inputs ----
 function bindAttackerInputs() {
   const pokemonNames = Object.keys(POKEMON_DATA);
-  const moveNames = Object.keys(MOVES);
-  const itemNames = [
+  const moveNames    = Object.keys(MOVES);
+  const itemNames    = [
     'None','Life Orb','Choice Band','Choice Specs','Expert Belt',
     'Muscle Band','Wise Glasses','Leftovers','Focus Sash','Sitrus Berry',
     'Lum Berry','Rocky Helmet','Assault Vest','Eviolite','Black Sludge',
@@ -209,24 +257,23 @@ function bindAttackerInputs() {
     const el = document.getElementById(`atk-move-${i}`);
     setupAutocomplete(el, moveNames, v => { state.attacker.moves[i] = v; renderResults(); });
     el.addEventListener('change', () => { state.attacker.moves[i] = el.value; renderResults(); });
-
     document.getElementById(`move-crit-${i}`).addEventListener('change', e => {
       state.attacker.moveCrits[i] = e.target.checked; renderResults();
     });
     document.getElementById(`move-hits-${i}`).addEventListener('change', e => {
-      state.attacker.moveHits[i] = Math.max(1, parseInt(e.target.value) || 1); renderResults();
+      state.attacker.moveHits[i] = Math.max(1, parseInt(e.target.value)||1); renderResults();
     });
   }
 }
 
-// ---- Bind field / options inputs ----
+// ---- Bind options ----
 function bindOptionsInputs() {
-  const bindCheck = (id, key) => {
+  const chk = (id, key) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', e => { state.options[key] = e.target.checked; renderResults(); });
   };
-  const bindSelect = (id, key, asInt=false) => {
+  const sel = (id, key, asInt=false) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', e => {
@@ -235,35 +282,39 @@ function bindOptionsInputs() {
     });
   };
 
-  bindSelect('field-weather',    'weather');
-  bindSelect('field-terrain',    'terrain');
-  bindSelect('my-atk-stage',    'myAtkStage',  true);
-  bindSelect('my-def-stage',    'myDefStage',  true);
-  bindSelect('foe-atk-stage',   'foeAtkStage', true);
-  bindSelect('foe-def-stage',   'foeDefStage', true);
-  bindSelect('opt-spikes',      'spikes',      true);
+  sel('field-weather',     'weather');
+  sel('field-terrain',     'terrain');
+  sel('opt-spikes',        'spikes', true);
 
-  bindCheck('opt-helping-hand',  'helpingHand');
-  bindCheck('opt-tailwind-atk',  'tailwindAtk');
-  bindCheck('opt-tailwind-def',  'tailwindDef');
-  bindCheck('opt-stealth-rock',  'stealthRock');
+  chk('opt-tailwind-atk',  'tailwindAtk');
+  chk('opt-tailwind-def',  'tailwindDef');
+  chk('opt-stealth-rock',  'stealthRock');
+  chk('opt-doubles',       'doubles');
 
-  bindCheck('my-reflect',        'myReflect');
-  bindCheck('my-lightscreen',    'myLightScreen');
-  bindCheck('my-aurora-veil',    'myAuroraVeil');
-  bindCheck('foe-reflect',       'foeReflect');
-  bindCheck('foe-lightscreen',   'foeLightScreen');
-  bindCheck('foe-aurora-veil',   'foeAuroraVeil');
+  chk('my-switch',         'mySwitch');
+  chk('foe-switch',        'foeSwitch');
+  chk('my-helping-hand',   'myHelpingHand');
+  chk('foe-helping-hand',  'foeHelpingHand');
+  chk('my-flower-gift',    'myFlowerGift');
+  chk('foe-flower-gift',   'foeFlowerGift');
+  chk('my-power-trick',    'myPowerTrick');
+  chk('foe-power-trick',   'foePowerTrick');
+
+  chk('my-reflect',        'myReflect');
+  chk('my-lightscreen',    'myLightScreen');
+  chk('my-aurora-veil',    'myAuroraVeil');
+  chk('foe-reflect',       'foeReflect');
+  chk('foe-lightscreen',   'foeLightScreen');
+  chk('foe-aurora-veil',   'foeAuroraVeil');
 
   document.getElementById('def-status').addEventListener('change', e => {
     state.options.defStatus = e.target.value; renderResults();
   });
 
   document.getElementById('def-current-hp').addEventListener('input', e => {
-    const val = parseInt(e.target.value);
-    const defMon  = currentMon();
-    const defStats = getStats(defMon);
-    const maxHP = defStats ? defStats.hp : 1;
+    const val    = parseInt(e.target.value);
+    const defStats = getStats(currentMon());
+    const maxHP  = defStats ? defStats.hp : 1;
     state.options.defCurrentHP = isNaN(val) ? null : Math.max(1, Math.min(maxHP, val));
     updateDefHPBar();
     renderResults();
@@ -285,28 +336,28 @@ function updateDefHPBar() {
   const defMon   = currentMon();
   const defStats = getStats(defMon);
   if (!defStats) return;
-  const maxHP  = defStats.hp;
-  const curHP  = state.options.defCurrentHP != null ? state.options.defCurrentHP : maxHP;
-  const pct    = Math.max(0, Math.min(100, curHP / maxHP * 100));
-  const bar    = document.getElementById('def-hp-bar-fill');
-  const label  = document.getElementById('def-hp-label');
+  const maxHP = defStats.hp;
+  const curHP = state.options.defCurrentHP != null ? state.options.defCurrentHP : maxHP;
+  const pct   = Math.max(0, Math.min(100, curHP / maxHP * 100));
+  const bar   = document.getElementById('def-hp-bar-fill');
+  const label = document.getElementById('def-hp-label');
   if (bar)   { bar.style.width = pct + '%'; bar.className = 'def-hp-fill ' + (pct > 50 ? 'hp-green' : pct > 25 ? 'hp-yellow' : 'hp-red'); }
   if (label) label.textContent = `${curHP} / ${maxHP} HP (${pct.toFixed(1)}%)`;
   const inp = document.getElementById('def-current-hp');
   if (inp)   { inp.max = maxHP; if (inp.value > maxHP) inp.value = maxHP; }
 }
 
-// ---- Sync inputs ↔ state ----
+// ---- Sync UI ↔ state ----
 function syncAttackerInputsToState() {
   const a = state.attacker;
-  const set = (id, v) => { const el=document.getElementById(id); if(el) el.value=v; };
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   set('atk-name', a.name);
   set('atk-level', a.level);
   set('atk-nature', a.nature);
   set('atk-item', a.item);
   set('atk-status', a.status);
-  for (let i=0;i<4;i++) {
-    set(`atk-move-${i}`, a.moves[i]||'');
+  for (let i = 0; i < 4; i++) {
+    set(`atk-move-${i}`, a.moves[i] || '');
     const crit = document.getElementById(`move-crit-${i}`);
     if (crit) crit.checked = a.moveCrits[i];
     set(`move-hits-${i}`, a.moveHits[i] ?? 1);
@@ -318,30 +369,34 @@ function syncAttackerInputsToState() {
   updateAttackerStats();
 }
 
-function syncOptionsInputsToState() {
+function syncOptionsToUI() {
   const o = state.options;
-  const set = (id, v, type='val') => {
+  const set = (id, v, isChk=false) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (type==='check') el.checked = v; else el.value = v;
+    if (isChk) el.checked = v; else el.value = v;
   };
   set('field-weather',    o.weather);
   set('field-terrain',    o.terrain);
-  set('my-atk-stage',    o.myAtkStage);
-  set('my-def-stage',    o.myDefStage);
-  set('foe-atk-stage',   o.foeAtkStage);
-  set('foe-def-stage',   o.foeDefStage);
   set('opt-spikes',       o.spikes);
-  set('opt-helping-hand', o.helpingHand, 'check');
-  set('opt-tailwind-atk', o.tailwindAtk, 'check');
-  set('opt-tailwind-def', o.tailwindDef, 'check');
-  set('opt-stealth-rock', o.stealthRock, 'check');
-  set('my-reflect',       o.myReflect,     'check');
-  set('my-lightscreen',   o.myLightScreen, 'check');
-  set('my-aurora-veil',   o.myAuroraVeil,  'check');
-  set('foe-reflect',      o.foeReflect,     'check');
-  set('foe-lightscreen',  o.foeLightScreen, 'check');
-  set('foe-aurora-veil',  o.foeAuroraVeil,  'check');
+  set('opt-tailwind-atk', o.tailwindAtk,    true);
+  set('opt-tailwind-def', o.tailwindDef,    true);
+  set('opt-stealth-rock', o.stealthRock,    true);
+  set('opt-doubles',      o.doubles,        true);
+  set('my-switch',        o.mySwitch,       true);
+  set('foe-switch',       o.foeSwitch,      true);
+  set('my-helping-hand',  o.myHelpingHand,  true);
+  set('foe-helping-hand', o.foeHelpingHand, true);
+  set('my-flower-gift',   o.myFlowerGift,   true);
+  set('foe-flower-gift',  o.foeFlowerGift,  true);
+  set('my-power-trick',   o.myPowerTrick,   true);
+  set('foe-power-trick',  o.foePowerTrick,  true);
+  set('my-reflect',       o.myReflect,      true);
+  set('my-lightscreen',   o.myLightScreen,  true);
+  set('my-aurora-veil',   o.myAuroraVeil,   true);
+  set('foe-reflect',      o.foeReflect,     true);
+  set('foe-lightscreen',  o.foeLightScreen, true);
+  set('foe-aurora-veil',  o.foeAuroraVeil,  true);
   set('def-status',       o.defStatus);
 }
 
@@ -362,15 +417,14 @@ function renderTrainerNav() {
   document.getElementById('trainer-counter').textContent  = `${state.trainerIdx + 1} / ${trainerCount()}`;
 
   const typeBadge = document.getElementById('trainer-type');
-  typeBadge.textContent   = trainer.type;
+  typeBadge.textContent      = trainer.type;
   typeBadge.style.background = TYPE_COLORS[trainer.type] || '#666';
 
   document.querySelectorAll('.trainer-list-item').forEach((el, i) => el.classList.toggle('active', i === state.trainerIdx));
-
   document.getElementById('btn-prev-trainer').disabled = state.trainerIdx === 0;
   document.getElementById('btn-next-trainer').disabled = state.trainerIdx === trainerCount() - 1;
   document.getElementById('btn-prev-mon').disabled = state.trainerIdx === 0 && state.monIdx === 0;
-  document.getElementById('btn-next-mon').disabled = state.trainerIdx === trainerCount()-1 && state.monIdx === monCount()-1;
+  document.getElementById('btn-next-mon').disabled  = state.trainerIdx === trainerCount()-1 && state.monIdx === monCount()-1;
 }
 
 function renderMonDots() {
@@ -390,10 +444,10 @@ function renderMonDots() {
 }
 
 function renderDefender() {
-  const mon = currentMon();
+  const mon     = currentMon();
   const defStats = getStats(mon);
-  const data  = POKEMON_DATA[mon.name];
-  const types = data ? [data[6], data[7]].filter(Boolean) : [];
+  const data    = POKEMON_DATA[mon.name];
+  const types   = data ? [data[6], data[7]].filter(Boolean) : [];
 
   document.getElementById('def-name').textContent    = mon.name.replace(/_/g,' ');
   document.getElementById('def-level').textContent   = `Lv. ${mon.level}`;
@@ -419,10 +473,7 @@ function renderDefender() {
       if (el) el.textContent = defStats[s];
     });
     const hpInput = document.getElementById('def-current-hp');
-    if (hpInput) {
-      hpInput.max = defStats.hp;
-      hpInput.placeholder = defStats.hp;
-    }
+    if (hpInput) { hpInput.max = defStats.hp; hpInput.placeholder = defStats.hp; }
   }
 
   const movesEl = document.getElementById('def-moves');
@@ -456,13 +507,13 @@ function renderDefender() {
   });
 }
 
-// ---- Build a result card element ----
+// ---- Build a result card ----
 function buildResultCard(moveKey, result, moveData, isCrit, isIncoming) {
   const card = document.createElement('div');
   card.className = 'result-card' + (isIncoming ? ' incoming-card' : '');
 
   if (!result || !moveData) {
-    card.innerHTML = `<span class="result-move-name">${moveKey}</span><span class="result-detail muted">—</span>`;
+    card.innerHTML = `<span class="result-move-name">${moveKey}</span><span class="muted"> —</span>`;
     return card;
   }
 
@@ -495,7 +546,7 @@ function buildResultCard(moveKey, result, moveData, isCrit, isIncoming) {
 
   const isPartialHP = !isIncoming && state.options.defCurrentHP != null;
   const dmgLine = isPartialHP
-    ? `${result.min}–${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max HP &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% current HP`
+    ? `${result.min}–${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% cur`
     : `${result.min}–${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}%`;
 
   let koClass = '';
@@ -541,10 +592,10 @@ function renderResults() {
   resultsEl.innerHTML  = '';
   if (incomingEl) incomingEl.innerHTML = '';
 
-  const attacker  = state.attacker;
-  const foe       = currentMon();
-  const atkStats  = getStats(attacker);
-  const defStats  = getStats(foe);
+  const attacker = state.attacker;
+  const foe      = currentMon();
+  const atkStats = getStats(attacker);
+  const defStats = getStats(foe);
 
   if (!atkStats || !defStats) {
     resultsEl.innerHTML = '<div class="result-empty">Unknown Pokémon — check spelling</div>';
@@ -556,73 +607,88 @@ function renderResults() {
   const defData  = POKEMON_DATA[foe.name];
   const defTypes = defData ? [defData[6], defData[7]].filter(Boolean) : [];
 
-  // ---- Speed comparison ----
+  // Speed comparison
   const speedInfo = compareSpeed(atkStats, defStats, {
     attackerStatus: attacker.status,
     defStatus:      state.options.defStatus,
     tailwindAtk:    state.options.tailwindAtk,
     tailwindDef:    state.options.tailwindDef,
-    weather:        state.options.weather,
+    atkSpeStage:    state.options.myStages.spe,
+    defSpeStage:    state.options.foeStages.spe,
   });
   renderSpeedBanner(speedInfo);
   renderHazardBanner(defStats, defTypes);
   renderFieldTags();
 
-  // ---- Your damage rolls ----
-  const outOpts = {
+  // ---- Your outgoing damage ----
+  const baseOutOpts = {
     attackerItem:   attacker.item,
     attackerStatus: attacker.status,
-    atkStage:       state.options.myAtkStage,
-    defStage:       state.options.foeDefStage,
     weather:        state.options.weather,
     terrain:        state.options.terrain,
-    helpingHand:    state.options.helpingHand,
+    helpingHand:    state.options.myHelpingHand,
     reflect:        state.options.foeReflect,
     lightScreen:    state.options.foeLightScreen,
     auroraVeil:     state.options.foeAuroraVeil,
     defStatus:      state.options.defStatus,
     defCurrentHP:   state.options.defCurrentHP,
+    switching:      state.options.foeSwitch,
+    doubles:        state.options.doubles,
+    flowerGiftAtk:  state.options.myFlowerGift,
+    flowerGiftDef:  state.options.foeFlowerGift,
+    powerTrickAtk:  state.options.myPowerTrick,
+    powerTrickDef:  state.options.foePowerTrick,
   };
 
-  let hasAnyDamage = false;
   attacker.moves.forEach((moveKey, idx) => {
     if (!moveKey) return;
-    const moveOpts = { ...outOpts, crit: attacker.moveCrits[idx], hitCount: attacker.moveHits[idx] ?? 1 };
-    const result   = calcDamageRolls(attacker, atkStats, moveKey, foe, defStats, moveOpts);
-    const moveData = MOVES[moveKey];
-    const card = buildResultCard(moveKey, result, moveData, attacker.moveCrits[idx], false);
-    resultsEl.appendChild(card);
-    if (result && !result.immune && moveData && moveData[2] !== 'X' && moveData[0] > 0) hasAnyDamage = true;
+    const md      = MOVES[moveKey];
+    const isPhys  = md ? md[2] === 'P' : true;
+    const result  = calcDamageRolls(attacker, atkStats, moveKey, foe, defStats, {
+      ...baseOutOpts,
+      atkStage:  isPhys ? state.options.myStages.atk  : state.options.myStages.spa,
+      defStage:  isPhys ? state.options.foeStages.def : state.options.foeStages.spd,
+      crit:      attacker.moveCrits[idx],
+      hitCount:  attacker.moveHits[idx] ?? 1,
+    });
+    resultsEl.appendChild(buildResultCard(moveKey, result, md, attacker.moveCrits[idx], false));
   });
 
-  if (!hasAnyDamage && attacker.moves.every(m => !m)) {
-    const empty = document.createElement('div');
-    empty.className = 'result-empty';
-    empty.textContent = 'Enter moves above to see damage calculations.';
-    resultsEl.appendChild(empty);
+  if (attacker.moves.every(m => !m)) {
+    resultsEl.innerHTML = '<div class="result-empty">Enter moves above to see damage calculations.</div>';
   }
 
   // ---- Incoming damage (foe → you) ----
   if (!incomingEl) return;
-  const inOpts = {
+
+  const baseInOpts = {
     attackerItem:   foe.item,
     attackerStatus: state.options.defStatus,
-    atkStage:       state.options.foeAtkStage,
-    defStage:       state.options.myDefStage,
     weather:        state.options.weather,
     terrain:        state.options.terrain,
+    helpingHand:    state.options.foeHelpingHand,
     reflect:        state.options.myReflect,
     lightScreen:    state.options.myLightScreen,
     auroraVeil:     state.options.myAuroraVeil,
     defCurrentHP:   null,
+    switching:      state.options.mySwitch,
+    doubles:        state.options.doubles,
+    flowerGiftAtk:  state.options.foeFlowerGift,
+    flowerGiftDef:  state.options.myFlowerGift,
+    powerTrickAtk:  state.options.foePowerTrick,
+    powerTrickDef:  state.options.myPowerTrick,
   };
 
   foe.moves.forEach(moveKey => {
     if (!moveKey) return;
-    const result   = calcDamageRolls(foe, defStats, moveKey, attacker, atkStats, inOpts);
-    const moveData = MOVES[moveKey];
-    const card = buildResultCard(moveKey, result, moveData, false, true);
-    incomingEl.appendChild(card);
+    const md     = MOVES[moveKey];
+    const isPhys = md ? md[2] === 'P' : true;
+    const result = calcDamageRolls(foe, defStats, moveKey, attacker, atkStats, {
+      ...baseInOpts,
+      atkStage: isPhys ? state.options.foeStages.atk  : state.options.foeStages.spa,
+      defStage: isPhys ? state.options.myStages.def   : state.options.myStages.spd,
+    });
+    incomingEl.appendChild(buildResultCard(moveKey, result, md, false, true));
   });
 
   if (!foe.moves.some(Boolean)) {
@@ -637,17 +703,17 @@ function renderSpeedBanner(info) {
   const defName = currentMon().name.replace(/_/g,' ');
   let html, cls;
   if (info.faster === 'atk') {
-    cls = 'speed-banner-atk';
+    cls  = 'speed-banner-atk';
     html = `⚡ <strong>${atkName}</strong> is faster &nbsp;(${info.atkSpe} vs ${info.defSpe})`;
   } else if (info.faster === 'def') {
-    cls = 'speed-banner-def';
+    cls  = 'speed-banner-def';
     html = `⚡ <strong>${defName}</strong> moves first &nbsp;(${info.defSpe} vs ${info.atkSpe})`;
   } else {
-    cls = 'speed-banner-tie';
+    cls  = 'speed-banner-tie';
     html = `⚡ Speed tie &nbsp;(${info.atkSpe})`;
   }
-  el.innerHTML = html;
-  el.className = 'speed-banner ' + cls;
+  el.innerHTML  = html;
+  el.className  = 'speed-banner ' + cls;
   el.removeAttribute('hidden');
 }
 
@@ -655,7 +721,6 @@ function renderHazardBanner(defStats, defTypes) {
   const el = document.getElementById('hazard-banner');
   if (!el) return;
   const parts = [];
-
   if (state.options.stealthRock) {
     const frac = calcStealthRockDamage(defTypes);
     const dmg  = Math.floor(defStats.hp * frac);
@@ -664,16 +729,14 @@ function renderHazardBanner(defStats, defTypes) {
     parts.push(`🪨 Stealth Rock: ${dmg} HP (${(frac*100).toFixed(1)}%)${effStr}`);
   }
   if (state.options.spikes > 0) {
-    const isFlying = defTypes.includes('Flying');
-    if (!isFlying) {
+    if (defTypes.includes('Flying')) {
+      parts.push(`📌 Spikes: No effect (Flying)`);
+    } else {
       const frac = calcSpikesDamage(state.options.spikes, defTypes);
       const dmg  = Math.floor(defStats.hp * frac);
       parts.push(`📌 Spikes (${state.options.spikes}): ${dmg} HP (${(frac*100).toFixed(1)}%)`);
-    } else {
-      parts.push(`📌 Spikes: No effect (Flying)`);
     }
   }
-
   if (!parts.length) { el.setAttribute('hidden',''); return; }
   el.removeAttribute('hidden');
   el.innerHTML = parts.map(p => `<span class="hazard-item">${p}</span>`).join('');
@@ -691,14 +754,18 @@ function renderFieldTags() {
 
   if (w && w !== 'None') tags.push(`<span class="field-tag weather-tag">${weatherIcons[w]||''} ${w}</span>`);
   if (t && t !== 'None') tags.push(`<span class="field-tag terrain-tag">${terrainIcons[t]||''} ${t} Terrain</span>`);
-  if (state.options.helpingHand)  tags.push(`<span class="field-tag">Helping Hand</span>`);
-  if (state.options.tailwindAtk)  tags.push(`<span class="field-tag">Tailwind (You)</span>`);
-  if (state.options.tailwindDef)  tags.push(`<span class="field-tag">Tailwind (Foe)</span>`);
+  if (state.options.doubles)       tags.push(`<span class="field-tag">Doubles</span>`);
+  if (state.options.myHelpingHand) tags.push(`<span class="field-tag">Helping Hand (You)</span>`);
+  if (state.options.foeHelpingHand)tags.push(`<span class="field-tag">Helping Hand (Foe)</span>`);
+  if (state.options.tailwindAtk)   tags.push(`<span class="field-tag">Tailwind (You)</span>`);
+  if (state.options.tailwindDef)   tags.push(`<span class="field-tag">Tailwind (Foe)</span>`);
+  if (state.options.mySwitch)      tags.push(`<span class="field-tag">You Switching</span>`);
+  if (state.options.foeSwitch)     tags.push(`<span class="field-tag">Foe Switching</span>`);
 
   el.innerHTML = tags.join('');
 }
 
-// ---- Sidebar trainer list ----
+// ---- Sidebar ----
 function renderTrainerList() {
   const list = document.getElementById('trainer-list');
   list.innerHTML = '';
@@ -726,20 +793,19 @@ function parseShowdownPaste(text) {
     const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
     if (!lines.length) continue;
 
-    const firstLine = lines[0];
-    const atIdx = firstLine.indexOf(' @ ');
-    const namePart = atIdx !== -1 ? firstLine.slice(0, atIdx) : firstLine;
-    const item = atIdx !== -1 ? firstLine.slice(atIdx + 3).trim() : 'None';
-
+    const firstLine  = lines[0];
+    const atIdx      = firstLine.indexOf(' @ ');
+    const namePart   = atIdx !== -1 ? firstLine.slice(0, atIdx) : firstLine;
+    const item       = atIdx !== -1 ? firstLine.slice(atIdx + 3).trim() : 'None';
     const parenMatch = namePart.match(/\(([^)]+)\)\s*$/);
-    const rawName = (parenMatch ? parenMatch[1] : namePart).replace(/\s*\([MF]\)\s*$/, '').trim();
+    const rawName    = (parenMatch ? parenMatch[1] : namePart).replace(/\s*\([MF]\)\s*$/, '').trim();
 
     let ability='', level=50, nature='Hardy';
     const evs={hp:0,atk:0,def:0,spa:0,spd:0,spe:0};
     const ivs={hp:31,atk:31,def:31,spa:31,spd:31,spe:31};
     const moves=[];
 
-    for (let i=1; i<lines.length; i++) {
+    for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (line.startsWith('Ability:')) { ability = line.slice(8).trim(); }
       else if (line.startsWith('Level:')) { level = Math.max(1, Math.min(100, parseInt(line.slice(6))||50)); }
@@ -747,7 +813,7 @@ function parseShowdownPaste(text) {
         line.slice(4).trim().split('/').forEach(p => {
           const m = p.trim().match(/^(\d+)\s+(.+)$/);
           if (!m) return;
-          const v=Math.min(252, parseInt(m[1])), s=m[2].trim().toLowerCase();
+          const v=Math.min(252,parseInt(m[1])), s=m[2].trim().toLowerCase();
           if (s==='hp') evs.hp=v; else if (s==='atk') evs.atk=v; else if (s==='def') evs.def=v;
           else if (s.startsWith('spa')) evs.spa=v; else if (s.startsWith('spd')) evs.spd=v;
           else if (s.startsWith('spe')) evs.spe=v;
@@ -756,7 +822,7 @@ function parseShowdownPaste(text) {
         line.slice(4).trim().split('/').forEach(p => {
           const m = p.trim().match(/^(\d+)\s+(.+)$/);
           if (!m) return;
-          const v=Math.min(31, parseInt(m[1])), s=m[2].trim().toLowerCase();
+          const v=Math.min(31,parseInt(m[1])), s=m[2].trim().toLowerCase();
           if (s==='hp') ivs.hp=v; else if (s==='atk') ivs.atk=v; else if (s==='def') ivs.def=v;
           else if (s.startsWith('spa')) ivs.spa=v; else if (s.startsWith('spd')) ivs.spd=v;
           else if (s.startsWith('spe')) ivs.spe=v;
@@ -791,7 +857,7 @@ function exportToShowdown() {
   return lines.join('\n');
 }
 
-function openImportModal() { document.getElementById('import-modal').removeAttribute('hidden'); document.getElementById('import-textarea').focus(); }
+function openImportModal()  { document.getElementById('import-modal').removeAttribute('hidden'); document.getElementById('import-textarea').focus(); }
 function closeImportModal() { document.getElementById('import-modal').setAttribute('hidden',''); }
 
 function doImport() {
@@ -824,20 +890,20 @@ function loadFromBox(idx) {
 }
 
 function renderBox() {
-  const boxEl = document.getElementById('box-grid');
+  const boxEl      = document.getElementById('box-grid');
   const boxSection = document.getElementById('box-section');
   if (!state.box.length) { boxSection.setAttribute('hidden',''); return; }
   boxSection.removeAttribute('hidden');
   boxEl.innerHTML = '';
-  state.box.forEach((mon,i) => {
+  state.box.forEach((mon, i) => {
     const card = document.createElement('button');
-    card.className = 'box-card'+(i===state.boxIdx?' active':'');
+    card.className = 'box-card' + (i===state.boxIdx ? ' active' : '');
     card.title = `${mon.name} Lv.${mon.level} · ${mon.nature} · ${mon.item}`;
-    const img=document.createElement('img'); img.src=getSpriteUrl(mon.name); img.className='box-card-sprite'; img.onerror=()=>{img.style.display='none'};
-    const nm=document.createElement('div'); nm.className='box-card-name'; nm.textContent=mon.name;
-    const lv=document.createElement('div'); lv.className='box-card-lv'; lv.textContent=`Lv.${mon.level}`;
-    card.append(img,nm,lv);
-    card.addEventListener('click',()=>loadFromBox(i));
+    const img = document.createElement('img'); img.src=getSpriteUrl(mon.name); img.className='box-card-sprite'; img.onerror=()=>{img.style.display='none'};
+    const nm  = document.createElement('div'); nm.className='box-card-name'; nm.textContent=mon.name;
+    const lv  = document.createElement('div'); lv.className='box-card-lv';   lv.textContent=`Lv.${mon.level}`;
+    card.append(img, nm, lv);
+    card.addEventListener('click', () => loadFromBox(i));
     boxEl.appendChild(card);
   });
   document.getElementById('box-prev').disabled = state.boxIdx <= 0;
@@ -845,12 +911,12 @@ function renderBox() {
   document.getElementById('box-counter').textContent = `${state.boxIdx+1} / ${state.box.length}`;
 }
 
-function saveBoxToStorage()  { try { localStorage.setItem('rp_box', JSON.stringify(state.box)); } catch(e){} }
+function saveBoxToStorage()   { try { localStorage.setItem('rp_box', JSON.stringify(state.box)); } catch(e){} }
 function loadBoxFromStorage() {
   try {
     const raw = localStorage.getItem('rp_box');
     if (raw) { state.box = JSON.parse(raw); if (state.box.length) renderBox(); }
-  } catch(e){}
+  } catch(e) {}
 }
 
 // ---- Init ----
@@ -884,10 +950,12 @@ function init() {
     }
   });
 
+  bindStageBtns();
   bindAttackerInputs();
   bindOptionsInputs();
   syncAttackerInputsToState();
-  syncOptionsInputsToState();
+  syncOptionsToUI();
+  renderAllStages();
 
   loadBoxFromStorage();
   renderTrainerList();

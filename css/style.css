@@ -527,18 +527,22 @@ body {
 }
 .def-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 64px);
+  grid-template-columns: repeat(3, 1fr);
   gap: 5px;
 }
 .def-stat-cell {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 5px 7px;
+  padding: 4px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
 }
 .def-stat-cell .stat-name { display: block; margin-bottom: 1px; }
-.def-stat-cell .stat-value { font-size: 0.85rem; }
+.def-stat-cell .stat-value { font-size: 0.82rem; }
 .def-moves-panel {
   padding: 10px 16px;
   flex: 1;
@@ -970,38 +974,75 @@ body {
 }
 .hits-select:focus { outline: none; border-color: var(--accent); }
 
-/* ---- Stat stages 2×2 block ---- */
-.stages-block {
-  margin-bottom: 10px;
+/* ---- Inline stat stage controls ---- */
+.stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  margin-bottom: 1px;
+}
+.stage-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.stage-ctrl-sm {
+  margin: 1px 0 2px;
+}
+.stage-btn {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  color: var(--sub);
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+.stage-btn:hover {
+  background: var(--border2);
+  color: var(--accent2);
+  border-color: var(--accent);
+}
+.stage-val {
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.stage-val.stage-pos { color: var(--green); }
+.stage-val.stage-neg { color: var(--red); }
+
+
+/* ---- Battle Conditions two-column ---- */
+.bc-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.bc-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
-.stages-col-labels {
-  display: grid;
-  grid-template-columns: 36px 1fr 1fr;
-  gap: 6px;
-}
-.stage-col-label {
+.bc-col-label {
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
-  text-align: center;
-}
-.stages-row {
-  display: grid;
-  grid-template-columns: 36px 1fr 1fr;
-  gap: 6px;
-  align-items: center;
-}
-.stage-row-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--sub);
-  text-align: right;
-  padding-right: 2px;
+  margin-bottom: 2px;
+  display: block;
 }
 
 /* ---- Screens two-column ---- */
