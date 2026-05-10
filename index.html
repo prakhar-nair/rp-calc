@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Renegade Platinum Damage Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div>
+    <div class="header-logo">⚔ Renegade Platinum Calc</div>
+    <div class="header-sub">Damage Calculator · All 8 Gyms · Elite Four · Champion</div>
+  </div>
+  <div class="header-spacer"></div>
+  <span class="header-tip">Select a trainer in the sidebar → navigate with Next/Prev</span>
+</header>
+
+<div class="app-body">
+
+  <!-- Sidebar: trainer list -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Trainers</div>
+    <div id="trainer-list"></div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Trainer navigation bar -->
+    <div class="trainer-nav">
+      <div class="trainer-info">
+        <div class="trainer-name-row">
+          <span class="trainer-name" id="trainer-name">Roark</span>
+          <span class="type-badge" id="trainer-type">Rock</span>
+        </div>
+        <span class="trainer-title-text">
+          <span id="trainer-title">Gym Leader</span> ·
+          <span id="trainer-location">Oreburgh City</span>
+        </span>
+      </div>
+      <div class="nav-btn-group">
+        <button class="btn btn-sm" id="btn-prev-trainer">◀◀ Prev Trainer</button>
+        <button class="btn btn-sm" id="btn-prev-mon">◀ Prev</button>
+        <span class="trainer-counter" id="trainer-counter">1 / 13</span>
+        <button class="btn btn-sm" id="btn-next-mon">Next ▶</button>
+        <button class="btn btn-sm" id="btn-next-trainer">Next Trainer ▶▶</button>
+        <button class="btn btn-sm btn-danger" id="btn-reset">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Mon dots -->
+    <div class="mon-dots-row">
+      <span class="mon-dots-label">Team:</span>
+      <div id="mon-dots"></div>
+      <span class="trainer-counter" id="def-mon-counter" style="margin-left:auto">1 / 6</span>
+    </div>
+
+    <!-- Panels -->
+    <div class="panels">
+
+      <!-- Left: Attacker -->
+      <div class="panel-attacker">
+
+        <!-- Identity -->
+        <div class="panel-section">
+          <div class="panel-section-title">Your Pokémon</div>
+          <div class="atk-identity">
+            <div class="atk-sprite-wrap">
+              <img id="atk-sprite" src="" alt="attacker" onerror="this.style.display='none'" />
+            </div>
+            <div class="atk-fields">
+              <div class="field-group">
+                <label>Pokémon</label>
+                <input id="atk-name" type="text" placeholder="Garchomp" autocomplete="off" />
+              </div>
+              <div class="flex-row">
+                <div class="field-group" style="flex:1">
+                  <label>Level</label>
+                  <input id="atk-level" type="number" min="1" max="100" value="50" />
+                </div>
+                <div class="field-group" style="flex:2">
+                  <label>Nature</label>
+                  <select id="atk-nature"></select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="panel-section">
+          <div class="panel-section-title">Stats</div>
+          <div class="stat-label-row" style="margin-bottom:4px">
+            <span></span><span style="text-align:right;padding-right:2px">EV</span><span>IV</span>
+          </div>
+          <div class="stats-grid">
+            <!-- HP -->
+            <div class="stat-cell">
+              <span class="stat-name">HP</span>
+              <span class="stat-value" id="atk-stat-hp">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-hp" type="number" min="0" max="252" placeholder="0" title="HP EVs" />
+                <input id="atk-iv-hp" type="number" min="0" max="31" placeholder="31" title="HP IVs" />
+              </div>
+            </div>
+            <!-- Atk -->
+            <div class="stat-cell">
+              <span class="stat-name">Atk</span>
+              <span class="stat-value" id="atk-stat-atk">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-atk" type="number" min="0" max="252" placeholder="0" title="Atk EVs" />
+                <input id="atk-iv-atk" type="number" min="0" max="31" placeholder="31" title="Atk IVs" />
+              </div>
+            </div>
+            <!-- Def -->
+            <div class="stat-cell">
+              <span class="stat-name">Def</span>
+              <span class="stat-value" id="atk-stat-def">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-def" type="number" min="0" max="252" placeholder="0" title="Def EVs" />
+                <input id="atk-iv-def" type="number" min="0" max="31" placeholder="31" title="Def IVs" />
+              </div>
+            </div>
+            <!-- SpA -->
+            <div class="stat-cell">
+              <span class="stat-name">SpA</span>
+              <span class="stat-value" id="atk-stat-spa">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-spa" type="number" min="0" max="252" placeholder="0" title="SpA EVs" />
+                <input id="atk-iv-spa" type="number" min="0" max="31" placeholder="31" title="SpA IVs" />
+              </div>
+            </div>
+            <!-- SpD -->
+            <div class="stat-cell">
+              <span class="stat-name">SpD</span>
+              <span class="stat-value" id="atk-stat-spd">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-spd" type="number" min="0" max="252" placeholder="0" title="SpD EVs" />
+                <input id="atk-iv-spd" type="number" min="0" max="31" placeholder="31" title="SpD IVs" />
+              </div>
+            </div>
+            <!-- Spe -->
+            <div class="stat-cell">
+              <span class="stat-name">Spe</span>
+              <span class="stat-value" id="atk-stat-spe">—</span>
+              <div class="stat-inputs">
+                <input id="atk-ev-spe" type="number" min="0" max="252" placeholder="0" title="Spe EVs" />
+                <input id="atk-iv-spe" type="number" min="0" max="31" placeholder="31" title="Spe IVs" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Moves -->
+        <div class="panel-section">
+          <div class="panel-section-title">Moves</div>
+          <div class="moves-grid">
+            <div class="field-group">
+              <label>Move 1</label>
+              <input id="atk-move-0" type="text" placeholder="Earthquake" autocomplete="off" />
+            </div>
+            <div class="field-group">
+              <label>Move 2</label>
+              <input id="atk-move-1" type="text" placeholder="Dragon Claw" autocomplete="off" />
+            </div>
+            <div class="field-group">
+              <label>Move 3</label>
+              <input id="atk-move-2" type="text" placeholder="Stone Edge" autocomplete="off" />
+            </div>
+            <div class="field-group">
+              <label>Move 4</label>
+              <input id="atk-move-3" type="text" placeholder="Swords Dance" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Item & Modifiers -->
+        <div class="panel-section">
+          <div class="panel-section-title">Item &amp; Modifiers</div>
+          <div class="field-group" style="margin-bottom:10px">
+            <label>Held Item</label>
+            <input id="atk-item" type="text" placeholder="None" autocomplete="off" value="None" />
+          </div>
+          <div class="flex-row" style="margin-bottom:10px;flex-wrap:wrap;gap:12px">
+            <div class="field-group" style="flex:1">
+              <label>Atk Stage</label>
+              <select id="atk-stage" class="stage-select w-full">
+                <option value="-6">-6</option><option value="-5">-5</option>
+                <option value="-4">-4</option><option value="-3">-3</option>
+                <option value="-2">-2</option><option value="-1">-1</option>
+                <option value="0" selected>+0</option>
+                <option value="1">+1</option><option value="2">+2</option>
+                <option value="3">+3</option><option value="4">+4</option>
+                <option value="5">+5</option><option value="6">+6</option>
+              </select>
+            </div>
+            <div class="field-group" style="flex:1">
+              <label>Def Stage</label>
+              <select id="def-stage" class="stage-select w-full">
+                <option value="-6">-6</option><option value="-5">-5</option>
+                <option value="-4">-4</option><option value="-3">-3</option>
+                <option value="-2">-2</option><option value="-1">-1</option>
+                <option value="0" selected>+0</option>
+                <option value="1">+1</option><option value="2">+2</option>
+                <option value="3">+3</option><option value="4">+4</option>
+                <option value="5">+5</option><option value="6">+6</option>
+              </select>
+            </div>
+          </div>
+          <div class="options-row">
+            <label class="opt-check"><input type="checkbox" id="opt-crit" /> Crit</label>
+            <label class="opt-check"><input type="checkbox" id="opt-burned" /> Burned</label>
+            <label class="opt-check"><input type="checkbox" id="opt-reflect" /> Reflect</label>
+            <label class="opt-check"><input type="checkbox" id="opt-lightscreen" /> Light Screen</label>
+          </div>
+        </div>
+
+      </div>
+      <!-- end panel-attacker -->
+
+      <!-- Right: Defender + Results -->
+      <div class="panel-right">
+
+        <!-- Defender card -->
+        <div class="defender-card">
+          <div class="def-sprite-wrap">
+            <img id="def-sprite" src="" alt="defender" onerror="this.src=''" />
+          </div>
+          <div class="def-info">
+            <div class="def-name-row">
+              <span class="def-name" id="def-name">Nosepass</span>
+              <span class="def-level" id="def-level">Lv. 15</span>
+            </div>
+            <div id="def-types"></div>
+            <div class="def-meta">
+              <div class="def-meta-item">
+                <span class="def-meta-label">Nature</span>
+                <span class="def-meta-value" id="def-nature">—</span>
+              </div>
+              <div class="def-meta-item">
+                <span class="def-meta-label">Ability</span>
+                <span class="def-meta-value" id="def-ability">—</span>
+              </div>
+              <div class="def-meta-item">
+                <span class="def-meta-label">Item</span>
+                <span class="def-meta-value" id="def-item">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Def stats + moves -->
+        <div class="def-body">
+          <div class="def-stats-panel">
+            <div class="def-moves-title">Stats (31 IVs / 0 EVs)</div>
+            <div class="def-stats-grid">
+              <div class="def-stat-cell"><span class="stat-name">HP</span><span class="stat-value" id="def-stat-hp">—</span></div>
+              <div class="def-stat-cell"><span class="stat-name">Atk</span><span class="stat-value" id="def-stat-atk">—</span></div>
+              <div class="def-stat-cell"><span class="stat-name">Def</span><span class="stat-value" id="def-stat-def">—</span></div>
+              <div class="def-stat-cell"><span class="stat-name">SpA</span><span class="stat-value" id="def-stat-spa">—</span></div>
+              <div class="def-stat-cell"><span class="stat-name">SpD</span><span class="stat-value" id="def-stat-spd">—</span></div>
+              <div class="def-stat-cell"><span class="stat-name">Spe</span><span class="stat-value" id="def-stat-spe">—</span></div>
+            </div>
+          </div>
+          <div class="def-moves-panel">
+            <div class="def-moves-title">Moves</div>
+            <div id="def-moves"></div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-section">
+          <div class="results-header">Damage Results</div>
+          <div id="results-list"></div>
+        </div>
+
+      </div>
+      <!-- end panel-right -->
+
+    </div>
+    <!-- end panels -->
+  </div>
+  <!-- end main -->
+</div>
+<!-- end app-body -->
+
+<script src="js/data.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
