@@ -22,6 +22,7 @@ const state = {
     status: 'Healthy',
     moves: ['Earthquake','Dragon Claw','Stone Edge','Swords Dance'],
     moveCrits: [false, false, false, false],
+    moveHits:  [1, 1, 1, 1],
   },
   options: {
     // Stat stages — your pokemon
@@ -105,6 +106,7 @@ function resetAttacker() {
     evs:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0},
     moves:['Earthquake','Dragon Claw','Stone Edge','Swords Dance'],
     moveCrits:[false,false,false,false],
+    moveHits:[1,1,1,1],
   };
   state.options = {
     myAtkStage:0, myDefStage:0,
@@ -211,6 +213,9 @@ function bindAttackerInputs() {
     document.getElementById(`move-crit-${i}`).addEventListener('change', e => {
       state.attacker.moveCrits[i] = e.target.checked; renderResults();
     });
+    document.getElementById(`move-hits-${i}`).addEventListener('change', e => {
+      state.attacker.moveHits[i] = Math.max(1, parseInt(e.target.value) || 1); renderResults();
+    });
   }
 }
 
@@ -304,6 +309,7 @@ function syncAttackerInputsToState() {
     set(`atk-move-${i}`, a.moves[i]||'');
     const crit = document.getElementById(`move-crit-${i}`);
     if (crit) crit.checked = a.moveCrits[i];
+    set(`move-hits-${i}`, a.moveHits[i] ?? 1);
   }
   ['hp','atk','def','spa','spd','spe'].forEach(s => {
     set(`atk-ev-${s}`, a.evs[s]);
@@ -485,13 +491,12 @@ function buildResultCard(moveKey, result, moveData, isCrit, isIncoming) {
   const effLabel = getEffectivenessLabel(result.effectiveness);
   const pctMin   = result.minPct.toFixed(1);
   const pctMax   = result.maxPct.toFixed(1);
+  const hitStr   = result.hitCount > 1 ? ` ×${result.hitCount}` : '';
 
   const isPartialHP = !isIncoming && state.options.defCurrentHP != null;
-  const defStats = getStats(currentMon());
-  const defHP = defStats ? defStats.hp : 1;
   const dmgLine = isPartialHP
-    ? `${result.min}–${result.max} HP &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max HP &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% current HP`
-    : `${result.min}–${result.max} HP &nbsp;·&nbsp; ${pctMin}%–${pctMax}%`;
+    ? `${result.min}–${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}% max HP &nbsp;·&nbsp; ${result.minCurPct.toFixed(1)}%–${result.maxCurPct.toFixed(1)}% current HP`
+    : `${result.min}–${result.max} HP${hitStr} &nbsp;·&nbsp; ${pctMin}%–${pctMax}%`;
 
   let koClass = '';
   if (koLabel === 'OHKO')               koClass = 'ko-ohko';
@@ -512,7 +517,7 @@ function buildResultCard(moveKey, result, moveData, isCrit, isIncoming) {
     <div class="result-top">
       <span class="move-type-tag" style="background:${TYPE_COLORS[mType]||'#555'}">${mType}</span>
       <span class="result-move-name">${moveKey}</span>
-      <span class="result-power">${power} BP</span>
+      <span class="result-power">${power} BP${hitStr}</span>
       ${result.stab ? '<span class="stab-tag">STAB</span>' : ''}
       <span class="eff-tag ${effClass}">${effLabel}</span>
       ${wTag}${tTag}
@@ -582,7 +587,7 @@ function renderResults() {
   let hasAnyDamage = false;
   attacker.moves.forEach((moveKey, idx) => {
     if (!moveKey) return;
-    const moveOpts = { ...outOpts, crit: attacker.moveCrits[idx] };
+    const moveOpts = { ...outOpts, crit: attacker.moveCrits[idx], hitCount: attacker.moveHits[idx] ?? 1 };
     const result   = calcDamageRolls(attacker, atkStats, moveKey, foe, defStats, moveOpts);
     const moveData = MOVES[moveKey];
     const card = buildResultCard(moveKey, result, moveData, attacker.moveCrits[idx], false);
@@ -764,7 +769,7 @@ function parseShowdownPaste(text) {
     }
     while (moves.length < 4) moves.push('');
     sets.push({ name:rawName, item, ability, level, nature, evs, ivs, moves,
-                moveCrits:[false,false,false,false] });
+                moveCrits:[false,false,false,false], moveHits:[1,1,1,1] });
   }
   return sets;
 }
@@ -811,6 +816,7 @@ function loadFromBox(idx) {
     ability:mon.ability||'', status:'Healthy',
     ivs:{...mon.ivs}, evs:{...mon.evs}, moves:[...mon.moves],
     moveCrits:[...(mon.moveCrits||[false,false,false,false])],
+    moveHits:[...(mon.moveHits||[1,1,1,1])],
   };
   syncAttackerInputsToState();
   renderBox();

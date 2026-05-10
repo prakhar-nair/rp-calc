@@ -956,6 +956,19 @@ body {
   font-size: 0.73rem;
   white-space: nowrap;
 }
+.hits-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 5px 4px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  flex-shrink: 0;
+  width: 44px;
+  cursor: pointer;
+}
+.hits-select:focus { outline: none; border-color: var(--accent); }
 
 /* ---- Stat stages 2×2 block ---- */
 .stages-block {
