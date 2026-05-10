@@ -5,6 +5,8 @@
 const state = {
   trainerIdx: 0,
   monIdx: 0,
+  box: [],        // imported Pokémon from Showdown paste
+  boxIdx: 0,      // currently selected box slot
   attacker: {
     name: 'Garchomp',
     level: 50,
@@ -468,6 +470,216 @@ function renderResults() {
   }
 }
 
+// ============================================================
+// BOX IMPORT — Pokémon Showdown paste format
+// ============================================================
+
+function parseShowdownPaste(text) {
+  const sets = [];
+  const blocks = text.trim().split(/\n\s*\n/);
+
+  for (const block of blocks) {
+    const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+
+    // First line: "Nickname (Species) @ Item" or "Species @ Item" or just "Species"
+    const firstLine = lines[0];
+    let rawName, item;
+
+    const atIdx = firstLine.indexOf(' @ ');
+    const namePart = atIdx !== -1 ? firstLine.slice(0, atIdx) : firstLine;
+    item = atIdx !== -1 ? firstLine.slice(atIdx + 3).trim() : 'None';
+
+    // Handle "Nickname (Species)" — extract species in parens
+    const parenMatch = namePart.match(/\(([^)]+)\)\s*$/);
+    rawName = parenMatch ? parenMatch[1] : namePart;
+    // Strip gender markers
+    rawName = rawName.replace(/\s*\([MF]\)\s*$/, '').trim();
+
+    let ability = '', level = 50, nature = 'Hardy';
+    const evs = { hp:0, atk:0, def:0, spa:0, spd:0, spe:0 };
+    const ivs = { hp:31, atk:31, def:31, spa:31, spd:31, spe:31 };
+    const moves = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (line.startsWith('Ability:')) {
+        ability = line.slice(8).trim();
+      } else if (line.startsWith('Level:')) {
+        level = Math.max(1, Math.min(100, parseInt(line.slice(6).trim()) || 50));
+      } else if (line.startsWith('EVs:')) {
+        line.slice(4).trim().split('/').forEach(part => {
+          const m = part.trim().match(/^(\d+)\s+(.+)$/);
+          if (!m) return;
+          const v = Math.min(252, parseInt(m[1]));
+          const s = m[2].trim().toLowerCase();
+          if (s === 'hp')  evs.hp  = v;
+          else if (s === 'atk') evs.atk = v;
+          else if (s === 'def') evs.def = v;
+          else if (s === 'spa' || s === 'spatkk' || s.startsWith('spa')) evs.spa = v;
+          else if (s === 'spd' || s.startsWith('spd')) evs.spd = v;
+          else if (s === 'spe' || s.startsWith('spe')) evs.spe = v;
+        });
+      } else if (line.startsWith('IVs:')) {
+        line.slice(4).trim().split('/').forEach(part => {
+          const m = part.trim().match(/^(\d+)\s+(.+)$/);
+          if (!m) return;
+          const v = Math.min(31, parseInt(m[1]));
+          const s = m[2].trim().toLowerCase();
+          if (s === 'hp')  ivs.hp  = v;
+          else if (s === 'atk') ivs.atk = v;
+          else if (s === 'def') ivs.def = v;
+          else if (s === 'spa' || s.startsWith('spa')) ivs.spa = v;
+          else if (s === 'spd' || s.startsWith('spd')) ivs.spd = v;
+          else if (s === 'spe' || s.startsWith('spe')) ivs.spe = v;
+        });
+      } else if (line.endsWith(' Nature')) {
+        nature = line.replace(' Nature', '').trim();
+      } else if (line.startsWith('- ')) {
+        if (moves.length < 4) moves.push(line.slice(2).trim());
+      }
+    }
+
+    // Pad moves to 4 slots
+    while (moves.length < 4) moves.push('');
+
+    sets.push({ name: rawName, item, ability, level, nature, evs, ivs, moves });
+  }
+
+  return sets;
+}
+
+function openImportModal() {
+  document.getElementById('import-modal').removeAttribute('hidden');
+  document.getElementById('import-textarea').focus();
+}
+function closeImportModal() {
+  document.getElementById('import-modal').setAttribute('hidden', '');
+}
+
+function doImport() {
+  const text = document.getElementById('import-textarea').value.trim();
+  if (!text) return;
+  const sets = parseShowdownPaste(text);
+  if (!sets.length) {
+    alert('Could not parse any Pokémon. Make sure to use Pokémon Showdown export format.');
+    return;
+  }
+  state.box = sets;
+  state.boxIdx = 0;
+  saveBoxToStorage();
+  closeImportModal();
+  loadFromBox(0);
+  renderBox();
+}
+
+function loadFromBox(idx) {
+  if (!state.box.length) return;
+  idx = Math.max(0, Math.min(state.box.length - 1, idx));
+  state.boxIdx = idx;
+  const mon = state.box[idx];
+  state.attacker = {
+    name: mon.name,
+    level: mon.level,
+    nature: mon.nature,
+    item: mon.item || 'None',
+    ability: mon.ability || '',
+    burned: false,
+    atkStage: 0,
+    ivs: { ...mon.ivs },
+    evs: { ...mon.evs },
+    moves: [...mon.moves],
+  };
+  syncAttackerInputsToState();
+  renderBox();
+  render();
+}
+
+function syncAttackerInputsToState() {
+  const a = state.attacker;
+  const nameEl = document.getElementById('atk-name');
+  if (nameEl) nameEl.value = a.name;
+  const lvEl = document.getElementById('atk-level');
+  if (lvEl) lvEl.value = a.level;
+  const natEl = document.getElementById('atk-nature');
+  if (natEl) natEl.value = a.nature;
+  const itemEl = document.getElementById('atk-item');
+  if (itemEl) itemEl.value = a.item;
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`atk-move-${i}`);
+    if (el) el.value = a.moves[i] || '';
+  }
+  ['hp','atk','def','spa','spd','spe'].forEach(s => {
+    const ev = document.getElementById(`atk-ev-${s}`);
+    const iv = document.getElementById(`atk-iv-${s}`);
+    if (ev) ev.value = a.evs[s];
+    if (iv) iv.value = a.ivs[s];
+  });
+  // Reset options
+  document.getElementById('atk-stage').value = '0';
+  document.getElementById('def-stage').value = '0';
+  ['opt-crit','opt-burned','opt-reflect','opt-lightscreen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+}
+
+function renderBox() {
+  const boxEl = document.getElementById('box-grid');
+  const boxSection = document.getElementById('box-section');
+  if (!state.box.length) {
+    boxSection.setAttribute('hidden', '');
+    return;
+  }
+  boxSection.removeAttribute('hidden');
+  boxEl.innerHTML = '';
+
+  state.box.forEach((mon, i) => {
+    const card = document.createElement('button');
+    card.className = 'box-card' + (i === state.boxIdx ? ' active' : '');
+    card.title = `${mon.name} Lv.${mon.level} · ${mon.nature} · ${mon.item}`;
+
+    const sprite = document.createElement('img');
+    sprite.src = getSpriteUrl(mon.name);
+    sprite.alt = mon.name;
+    sprite.className = 'box-card-sprite';
+    sprite.onerror = () => { sprite.style.display = 'none'; };
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'box-card-name';
+    nameEl.textContent = mon.name;
+
+    const lvEl = document.createElement('div');
+    lvEl.className = 'box-card-lv';
+    lvEl.textContent = `Lv.${mon.level}`;
+
+    card.appendChild(sprite);
+    card.appendChild(nameEl);
+    card.appendChild(lvEl);
+    card.addEventListener('click', () => loadFromBox(i));
+    boxEl.appendChild(card);
+  });
+
+  // box prev/next
+  document.getElementById('box-prev').disabled = state.boxIdx <= 0;
+  document.getElementById('box-next').disabled = state.boxIdx >= state.box.length - 1;
+  document.getElementById('box-counter').textContent = `${state.boxIdx + 1} / ${state.box.length}`;
+}
+
+function saveBoxToStorage() {
+  try { localStorage.setItem('rp_box', JSON.stringify(state.box)); } catch(e) {}
+}
+function loadBoxFromStorage() {
+  try {
+    const raw = localStorage.getItem('rp_box');
+    if (raw) {
+      state.box = JSON.parse(raw);
+      if (state.box.length) renderBox();
+    }
+  } catch(e) {}
+}
+
 // ---- Sidebar trainer list ----
 function renderTrainerList() {
   const list = document.getElementById('trainer-list');
@@ -496,6 +708,24 @@ function init() {
   document.getElementById('btn-next-trainer').addEventListener('click', nextTrainer);
   document.getElementById('btn-reset').addEventListener('click', resetAttacker);
 
+  // Import modal buttons
+  document.getElementById('btn-import').addEventListener('click', openImportModal);
+  document.getElementById('btn-import-cancel').addEventListener('click', closeImportModal);
+  document.getElementById('btn-import-confirm').addEventListener('click', doImport);
+  document.getElementById('import-modal-backdrop').addEventListener('click', closeImportModal);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImportModal(); });
+
+  // Box nav buttons
+  document.getElementById('box-prev').addEventListener('click', () => loadFromBox(state.boxIdx - 1));
+  document.getElementById('box-next').addEventListener('click', () => loadFromBox(state.boxIdx + 1));
+  document.getElementById('btn-clear-box').addEventListener('click', () => {
+    if (!state.box.length || confirm('Clear imported box?')) {
+      state.box = [];
+      saveBoxToStorage();
+      renderBox();
+    }
+  });
+
   // Populate nature select & bind all inputs
   bindAttackerInputs();
 
@@ -514,6 +744,7 @@ function init() {
     if (iv) iv.value = state.attacker.ivs[s];
   });
 
+  loadBoxFromStorage();
   renderTrainerList();
   render();
 }

@@ -754,6 +754,189 @@ body {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ---- Import Modal ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 500;
+  backdrop-filter: blur(3px);
+}
+#import-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 501;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#import-modal[hidden] { display: none; }
+.modal-dialog {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+  position: relative;
+  z-index: 502;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 1rem;
+  font-weight: 800;
+  flex: 1;
+  background: linear-gradient(135deg, var(--accent2), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-hint {
+  font-size: 0.8rem;
+  color: var(--sub);
+  line-height: 1.5;
+}
+.modal-example {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.modal-example-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 6px;
+}
+.modal-example-pre {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.75rem;
+  color: var(--sub);
+  white-space: pre;
+  margin: 0;
+  line-height: 1.5;
+}
+.modal-textarea {
+  width: 100%;
+  min-height: 220px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+.modal-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ---- Box grid ---- */
+.box-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.box-counter {
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 40px;
+  text-align: center;
+}
+.box-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.box-card {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 4px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.box-card:hover {
+  border-color: var(--accent);
+  background: var(--card2);
+}
+.box-card.active {
+  border-color: var(--accent);
+  background: rgba(124,110,245,0.15);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.box-card-sprite {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+.box-card-name {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+  max-width: 58px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.box-card-lv {
+  font-size: 0.58rem;
+  color: var(--muted);
+}
+
 /* ---- Utilities ---- */
 .muted { color: var(--muted); }
 .flex-row { display: flex; gap: 8px; align-items: center; }

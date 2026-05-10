@@ -18,8 +18,40 @@
     <div class="header-sub">Damage Calculator · All 8 Gyms · Elite Four · Champion</div>
   </div>
   <div class="header-spacer"></div>
-  <span class="header-tip">Select a trainer in the sidebar → navigate with Next/Prev</span>
+  <span class="header-tip">Select a trainer → navigate with Next/Prev</span>
+  <button class="btn btn-primary" id="btn-import" style="margin-left:8px">⬆ Import Box</button>
 </header>
+
+<!-- Import Modal -->
+<div id="import-modal" hidden role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+  <div id="import-modal-backdrop" class="modal-backdrop"></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2 id="import-modal-title" class="modal-title">Import Box</h2>
+      <button class="modal-close" id="btn-import-cancel" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">Paste a Pokémon Showdown export below. Separate multiple Pokémon with a blank line. Up to 30 Pokémon supported.</p>
+      <div class="modal-example">
+        <span class="modal-example-label">Example format:</span>
+        <pre class="modal-example-pre">Garchomp @ Choice Scarf
+Ability: Rough Skin
+Level: 50
+EVs: 4 HP / 252 Atk / 252 Spe
+Jolly Nature
+- Earthquake
+- Dragon Claw
+- Stone Edge
+- Poison Jab</pre>
+      </div>
+      <textarea id="import-textarea" class="modal-textarea" placeholder="Paste Showdown export here…" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="btn-import-cancel2" onclick="document.getElementById('btn-import-cancel').click()">Cancel</button>
+      <button class="btn btn-primary" id="btn-import-confirm">Import Pokémon</button>
+    </div>
+  </div>
+</div>
 
 <div class="app-body">
 
@@ -219,6 +251,18 @@
             <label class="opt-check"><input type="checkbox" id="opt-reflect" /> Reflect</label>
             <label class="opt-check"><input type="checkbox" id="opt-lightscreen" /> Light Screen</label>
           </div>
+        </div>
+
+        <!-- Box section (hidden until imported) -->
+        <div id="box-section" class="panel-section" hidden>
+          <div class="panel-section-title">My Box</div>
+          <div class="box-nav-row">
+            <button class="btn btn-sm" id="box-prev">◀</button>
+            <span class="box-counter" id="box-counter">1 / 1</span>
+            <button class="btn btn-sm" id="box-next">▶</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear-box" style="margin-left:auto">Clear</button>
+          </div>
+          <div id="box-grid" class="box-grid"></div>
         </div>
 
       </div>
