@@ -10,6 +10,10 @@ const state = {
   monIdx: 0,
   box: [],
   boxIdx: 0,
+  // Foe overrides — reset to trainer data on each mon switch
+  defNature:  '',
+  defAbility: '',
+  defItem:    '',
   attacker: {
     name: 'Garchomp',
     level: 50,
@@ -73,38 +77,62 @@ function currentMon()     { return currentTrainer().team[state.monIdx]; }
 function trainerCount()   { return TRAINERS.length; }
 function monCount()       { return currentTrainer().team.length; }
 
+// Returns currentMon merged with user overrides (nature/ability/item)
+function effectiveFoe() {
+  const mon = currentMon();
+  return {
+    ...mon,
+    nature:  state.defNature  || mon.nature  || 'Hardy',
+    ability: state.defAbility !== '' ? state.defAbility : (mon.ability || ''),
+    item:    state.defItem    !== '' ? state.defItem    : (mon.item    || 'None'),
+  };
+}
+
+function resetDefOverrides() {
+  const mon = currentMon();
+  state.defNature  = mon.nature  || 'Hardy';
+  state.defAbility = mon.ability || '';
+  state.defItem    = mon.item    || 'None';
+}
+
 // ---- Navigation ----
 function nextMon() {
   if (state.monIdx < monCount() - 1) { state.monIdx++; }
   else if (state.trainerIdx < trainerCount() - 1) { state.trainerIdx++; state.monIdx = 0; }
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 function prevMon() {
   if (state.monIdx > 0) { state.monIdx--; }
   else if (state.trainerIdx > 0) { state.trainerIdx--; state.monIdx = currentTrainer().team.length - 1; }
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 function nextTrainer() {
   if (state.trainerIdx < trainerCount() - 1) { state.trainerIdx++; state.monIdx = 0; }
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 function prevTrainer() {
   if (state.trainerIdx > 0) { state.trainerIdx--; state.monIdx = 0; }
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 function goToTrainer(idx) {
   state.trainerIdx = Math.max(0, Math.min(trainerCount()-1, idx));
   state.monIdx = 0;
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 function goToMon(idx) {
   state.monIdx = Math.max(0, Math.min(monCount()-1, idx));
   state.options.defCurrentHP = null;
+  resetDefOverrides();
   render();
 }
 
@@ -156,6 +184,40 @@ function updateStageDisplay(side, stat) {
   if (el) el.className = 'stage-val' + (val > 0 ? ' stage-pos' : val < 0 ? ' stage-neg' : '');
 }
 
+function stageMultiplier(stage) {
+  return stage >= 0 ? (2 + stage) / 2 : 2 / (2 - stage);
+}
+
+function updateStatEffectiveDisplays() {
+  const atkStats = getStats(state.attacker);
+  if (atkStats) {
+    STAT_KEYS.forEach(s => {
+      const el = document.getElementById(`atk-stat-${s}`);
+      if (!el) return;
+      const stage = state.options.myStages[s];
+      const effective = Math.floor(atkStats[s] * stageMultiplier(stage));
+      el.textContent = effective;
+      el.className = 'stat-value' + (stage > 0 ? ' stat-boosted' : stage < 0 ? ' stat-dropped' : '');
+    });
+    const hpEl = document.getElementById('atk-stat-hp');
+    if (hpEl) { hpEl.textContent = atkStats.hp; hpEl.className = 'stat-value'; }
+  }
+
+  const defStats = getStats(effectiveFoe());
+  if (defStats) {
+    STAT_KEYS.forEach(s => {
+      const el = document.getElementById(`def-stat-${s}`);
+      if (!el) return;
+      const stage = state.options.foeStages[s];
+      const effective = Math.floor(defStats[s] * stageMultiplier(stage));
+      el.textContent = effective;
+      el.className = 'stat-value' + (stage > 0 ? ' stat-boosted' : stage < 0 ? ' stat-dropped' : '');
+    });
+    const hpEl = document.getElementById('def-stat-hp');
+    if (hpEl) { hpEl.textContent = defStats.hp; hpEl.className = 'stat-value'; }
+  }
+}
+
 function renderAllStages() {
   STAT_KEYS.forEach(s => {
     updateStageDisplay('my', s);
@@ -173,6 +235,7 @@ function bindStageBtns() {
     const key   = side === 'my' ? 'myStages' : 'foeStages';
     state.options[key][stat] = clampStage((state.options[key][stat] || 0) + delta);
     updateStageDisplay(side, stat);
+    updateStatEffectiveDisplays();
     renderResults();
   });
 }
@@ -259,6 +322,23 @@ function bindAttackerInputs() {
   });
   natSel.addEventListener('change', e => { state.attacker.nature = e.target.value; updateAttackerStats(); renderResults(); });
 
+  // Foe editable fields
+  const defNatSel = document.getElementById('def-nature');
+  Object.keys(NATURES).forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    defNatSel.appendChild(opt);
+  });
+  defNatSel.addEventListener('change', e => { state.defNature = e.target.value; updateStatEffectiveDisplays(); renderResults(); });
+
+  const defAblInp = document.getElementById('def-ability');
+  setupAutocomplete(defAblInp, abilityNames, v => { state.defAbility = v; renderResults(); });
+  defAblInp.addEventListener('change', () => { state.defAbility = defAblInp.value; renderResults(); });
+
+  const defItmInp = document.getElementById('def-item');
+  setupAutocomplete(defItmInp, itemNames, v => { state.defItem = v; renderResults(); });
+  defItmInp.addEventListener('change', () => { state.defItem = defItmInp.value; renderResults(); });
+
   const itemInput = document.getElementById('atk-item');
   setupAutocomplete(itemInput, itemNames, v => { state.attacker.item = v; renderResults(); });
   itemInput.addEventListener('change', e => { state.attacker.item = e.target.value; renderResults(); });
@@ -339,7 +419,7 @@ function bindOptionsInputs() {
 
   document.getElementById('def-current-hp').addEventListener('input', e => {
     const val    = parseInt(e.target.value);
-    const defStats = getStats(currentMon());
+    const defStats = getStats(effectiveFoe());
     const maxHP  = defStats ? defStats.hp : 1;
     state.options.defCurrentHP = isNaN(val) ? null : Math.max(1, Math.min(maxHP, val));
     updateDefHPBar();
@@ -348,19 +428,13 @@ function bindOptionsInputs() {
 }
 
 function updateAttackerStats() {
-  const stats = getStats(state.attacker);
-  if (!stats) return;
-  ['hp','atk','def','spa','spd','spe'].forEach(s => {
-    const el = document.getElementById(`atk-stat-${s}`);
-    if (el) el.textContent = stats[s];
-  });
   const sprite = document.getElementById('atk-sprite');
   if (sprite) sprite.src = getSpriteUrl(state.attacker.name);
+  updateStatEffectiveDisplays();
 }
 
 function updateDefHPBar() {
-  const defMon   = currentMon();
-  const defStats = getStats(defMon);
+  const defStats = getStats(effectiveFoe());
   if (!defStats) return;
   const maxHP = defStats.hp;
   const curHP = state.options.defCurrentHP != null ? state.options.defCurrentHP : maxHP;
@@ -474,15 +548,21 @@ function renderMonDots() {
 
 function renderDefender() {
   const mon     = currentMon();
-  const defStats = getStats(mon);
+  const foe     = effectiveFoe();
+  const defStats = getStats(foe);
   const data    = POKEMON_DATA[mon.name];
   const types   = data ? [data[6], data[7]].filter(Boolean) : [];
 
-  document.getElementById('def-name').textContent    = mon.name.replace(/_/g,' ');
-  document.getElementById('def-level').textContent   = `Lv. ${mon.level}`;
-  document.getElementById('def-nature').textContent  = mon.nature;
-  document.getElementById('def-ability').textContent = mon.ability;
-  document.getElementById('def-item').textContent    = mon.item;
+  document.getElementById('def-name').textContent  = mon.name.replace(/_/g,' ');
+  document.getElementById('def-level').textContent = `Lv. ${mon.level}`;
+
+  // Populate editable foe fields
+  const natSel = document.getElementById('def-nature');
+  if (natSel) natSel.value = state.defNature;
+  const ablInp = document.getElementById('def-ability');
+  if (ablInp) ablInp.value = state.defAbility;
+  const itmInp = document.getElementById('def-item');
+  if (itmInp) itmInp.value = state.defItem;
   document.getElementById('def-sprite').src          = getSpriteUrl(mon.name);
   document.getElementById('def-mon-counter').textContent = `${state.monIdx + 1} / ${monCount()}`;
 
@@ -497,13 +577,10 @@ function renderDefender() {
   });
 
   if (defStats) {
-    ['hp','atk','def','spa','spd','spe'].forEach(s => {
-      const el = document.getElementById(`def-stat-${s}`);
-      if (el) el.textContent = defStats[s];
-    });
     const hpInput = document.getElementById('def-current-hp');
     if (hpInput) { hpInput.max = defStats.hp; hpInput.placeholder = defStats.hp; }
   }
+  updateStatEffectiveDisplays();
 
   const movesEl = document.getElementById('def-moves');
   movesEl.innerHTML = '';
@@ -622,7 +699,7 @@ function renderResults() {
   if (incomingEl) incomingEl.innerHTML = '';
 
   const attacker = state.attacker;
-  const foe      = currentMon();
+  const foe      = effectiveFoe();
   const atkStats = getStats(attacker);
   const defStats = getStats(foe);
 
@@ -739,7 +816,7 @@ function renderResults() {
 
 function updateBoxCardSpeeds() {
   if (!state.box.length) return;
-  const foeStats = getStats(currentMon());
+  const foeStats = getStats(effectiveFoe());
   if (!foeStats) return;
   document.querySelectorAll('.box-card').forEach((card, i) => {
     card.classList.remove('box-faster', 'box-slower', 'box-tie');
@@ -763,7 +840,7 @@ function renderSpeedBanner(info) {
   const el = document.getElementById('speed-banner');
   if (!el) return;
   const atkName = state.attacker.name;
-  const defName = currentMon().name.replace(/_/g,' ');
+  const defName = effectiveFoe().name.replace(/_/g,' ');
   let html, cls;
   if (info.faster === 'atk') {
     cls  = 'speed-banner-atk';
@@ -1021,6 +1098,7 @@ function init() {
   renderAllStages();
 
   loadBoxFromStorage();
+  resetDefOverrides();
   renderTrainerList();
   render();
 }

@@ -508,6 +508,18 @@ body {
   font-weight: 700;
 }
 .def-meta-value { font-size: 0.82rem; color: var(--text); }
+.def-meta-input {
+  font-size: 0.78rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 2px 5px;
+  max-width: 108px;
+  width: 100%;
+  cursor: pointer;
+}
+.def-meta-input:focus { outline: none; border-color: var(--accent); }
 .def-mon-counter {
   font-size: 0.72rem;
   color: var(--muted);
@@ -543,6 +555,8 @@ body {
 }
 .def-stat-cell .stat-name { display: block; margin-bottom: 1px; }
 .def-stat-cell .stat-value { font-size: 0.82rem; }
+.stat-value.stat-boosted { color: var(--green); font-weight: 800; }
+.stat-value.stat-dropped { color: var(--red);   font-weight: 800; }
 .def-moves-panel {
   padding: 10px 16px;
   flex: 1;
