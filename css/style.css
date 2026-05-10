@@ -218,6 +218,16 @@ body {
   border-color: var(--accent2);
   color: #fff;
 }
+.btn-secondary {
+  background: rgba(76,175,110,0.12);
+  border-color: rgba(76,175,110,0.35);
+  color: var(--green);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(76,175,110,0.2);
+  border-color: var(--green);
+  color: var(--green);
+}
 .btn-danger {
   background: rgba(224,85,85,0.15);
   border-color: rgba(224,85,85,0.4);

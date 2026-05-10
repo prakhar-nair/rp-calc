@@ -1073,6 +1073,36 @@ function init() {
   document.getElementById('import-modal-backdrop').addEventListener('click', closeImportModal);
   document.addEventListener('keydown', e => { if (e.key==='Escape') closeImportModal(); });
 
+  document.getElementById('sav-file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const mons = parseSavFile(ev.target.result);
+        if (!mons.length) {
+          alert('No Pokémon found in save file. Make sure this is a Platinum .sav file.');
+          return;
+        }
+        state.box = mons;
+        state.boxIdx = 0;
+        saveBoxToStorage();
+        loadFromBox(0);
+        closeImportModal();
+        const label = document.getElementById('btn-sav-label');
+        const orig = label.innerHTML;
+        label.innerHTML = `✓ ${mons.length} Pokémon loaded`;
+        setTimeout(() => { label.innerHTML = orig; }, 2000);
+      } catch (err) {
+        console.error('Save file parse error:', err);
+        alert('Failed to parse save file: ' + err.message + '\nMake sure this is a Renegade Platinum .sav file.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    // Reset input so same file can be re-selected
+    this.value = '';
+  });
+
   document.getElementById('btn-export').addEventListener('click', () => {
     const text = exportToShowdown();
     navigator.clipboard.writeText(text).then(() => {

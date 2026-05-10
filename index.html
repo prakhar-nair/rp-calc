@@ -47,6 +47,10 @@ Jolly Nature
     </div>
     <div class="modal-footer">
       <button class="btn" id="btn-import-cancel2" onclick="document.getElementById('btn-import-cancel').click()">Cancel</button>
+      <label class="btn btn-secondary" id="btn-sav-label" style="cursor:pointer" title="Import from a Platinum .sav file">
+        📂 Import .sav
+        <input type="file" id="sav-file-input" accept=".sav,.dsv,.bin" style="display:none" />
+      </label>
       <button class="btn btn-primary" id="btn-import-confirm">Import Pokémon</button>
     </div>
   </div>
@@ -556,6 +560,7 @@ Jolly Nature
 
 <script src="js/data.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/savparser.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
