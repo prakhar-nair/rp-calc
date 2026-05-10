@@ -556,13 +556,13 @@ function renderDefender() {
   document.getElementById('def-name').textContent  = mon.name.replace(/_/g,' ');
   document.getElementById('def-level').textContent = `Lv. ${mon.level}`;
 
-  // Populate editable foe fields
+  // Populate editable foe fields — use effectiveFoe() so trainer data shows even before resetDefOverrides runs
   const natSel = document.getElementById('def-nature');
-  if (natSel) natSel.value = state.defNature;
+  if (natSel) natSel.value = foe.nature;
   const ablInp = document.getElementById('def-ability');
-  if (ablInp) ablInp.value = state.defAbility;
+  if (ablInp) ablInp.value = foe.ability;
   const itmInp = document.getElementById('def-item');
-  if (itmInp) itmInp.value = state.defItem;
+  if (itmInp) itmInp.value = foe.item;
   document.getElementById('def-sprite').src          = getSpriteUrl(mon.name);
   document.getElementById('def-mon-counter').textContent = `${state.monIdx + 1} / ${monCount()}`;
 
