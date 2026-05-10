@@ -100,6 +100,11 @@ function goToMon(idx) {
   render();
 }
 function resetAttacker() {
+  state.trainerIdx = 0;
+  state.monIdx = 0;
+  state.box = [];
+  state.boxIdx = 0;
+  saveBoxToStorage();
   state.attacker = {
     name:'Garchomp', level:50, nature:'Jolly', item:'None', ability:'', status:'Healthy',
     ivs:{hp:31,atk:31,def:31,spa:31,spd:31,spe:31},
@@ -119,6 +124,8 @@ function resetAttacker() {
   };
   syncAttackerInputsToState();
   syncOptionsInputsToState();
+  renderBox();
+  renderTrainerList();
   render();
 }
 
