@@ -921,6 +921,22 @@ body {
   background: rgba(124,110,245,0.15);
   box-shadow: 0 0 0 1px var(--accent);
 }
+.box-card.box-faster {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(76,175,110,0.25);
+}
+.box-card.active.box-faster {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 3px rgba(76,175,110,0.35);
+}
+.box-card.box-slower {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(224,85,85,0.2);
+}
+.box-card.active.box-slower {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 3px rgba(224,85,85,0.25);
+}
 .box-card-sprite {
   width: 40px;
   height: 40px;

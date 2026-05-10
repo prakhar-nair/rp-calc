@@ -694,6 +694,30 @@ function renderResults() {
   if (!foe.moves.some(Boolean)) {
     incomingEl.innerHTML = '<div class="result-empty">No moves on record.</div>';
   }
+
+  updateBoxCardSpeeds();
+}
+
+function updateBoxCardSpeeds() {
+  if (!state.box.length) return;
+  const foeStats = getStats(currentMon());
+  if (!foeStats) return;
+  document.querySelectorAll('.box-card').forEach((card, i) => {
+    card.classList.remove('box-faster', 'box-slower', 'box-tie');
+    const mon = state.box[i];
+    if (!mon) return;
+    const monStats = getStats(mon);
+    if (!monStats) return;
+    const cmp = compareSpeed(monStats, foeStats, {
+      atkSpeStage: state.options.myStages.spe,
+      defSpeStage: state.options.foeStages.spe,
+      tailwindAtk: state.options.tailwindAtk,
+      tailwindDef: state.options.tailwindDef,
+    });
+    if (cmp.faster === 'atk')      card.classList.add('box-faster');
+    else if (cmp.faster === 'def') card.classList.add('box-slower');
+    else                           card.classList.add('box-tie');
+  });
 }
 
 function renderSpeedBanner(info) {
